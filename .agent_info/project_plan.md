@@ -13,6 +13,6 @@
 ## Feature Implementation
 - [x] Populate the per-day "Hours Worked" column by surfacing daily totals from `TimeSheetService` and wiring them into the UI labels.
 - [ ] Add stacked error/warning/info message areas in `src/app.py` with the specified coloring instead of the single `message_label`.
-- [ ] Implement simple markdown rendering for the About dialog (H1/H2, bold, italics, bullet lists) rather than showing raw `readme.md` text.
+- [x] Implement simple markdown rendering for the About dialog (H1/H2, bold, italics, bullet lists) rather than showing raw `readme.md` text.
 - [x] Use normalized time strings returned from the service to update entry fields after calculation so all inputs display consistently.
 - [ ] Add pytest-based unit tests covering time parsing/normalization, partial-day assumptions, lunch validation (including negative/blank cases), Friday clock-out scenarios, and KPI calculations.

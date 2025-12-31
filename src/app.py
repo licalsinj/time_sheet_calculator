@@ -5,6 +5,8 @@ CustomTkinter user interface for the time sheet calculator.
 """
 
 import os
+import tkinter as tk
+from tkinter import font as tkfont
 import customtkinter as ctk
 from timesheet_service import TimeSheetService, DayInput
 from typing import Optional
@@ -35,6 +37,7 @@ class TimeSheetApp(ctk.CTkFrame):
         self.days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
         self.entries: dict[str, dict[str, object]] = {}
         self._about_tooltip: Optional[ctk.CTkToplevel] = None
+        self._about_path: Optional[str] = None
         self._build_ui()
     # ----------------
     # Helper Methods
@@ -135,6 +138,245 @@ class TimeSheetApp(ctk.CTkFrame):
             None.
         """
         return f"{value:.2f}".rstrip("0").rstrip(".")
+
+    def _resolve_about_path(self) -> Optional[str]:
+        """
+        Finds the ABOUT.md file relative to the application source directory.
+
+        Args:
+            None.
+
+        Returns:
+            Absolute path to the ABOUT file if present, otherwise None.
+
+        Raises:
+            None.
+        """
+        base_dir = os.path.abspath(os.path.dirname(__file__))
+        for filename in ("ABOUT.md", "about.md"):
+            candidate = os.path.join(base_dir, filename)
+            if os.path.exists(candidate):
+                return candidate
+        return None
+
+    def _refresh_about_button_state(self) -> None:
+        """
+        Enables or disables the About button based on ABOUT file availability.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Raises:
+            None.
+        """
+        self._about_path = self._resolve_about_path()
+        if self._about_path:
+            self.about_button.configure(
+                state="normal",
+                hover=True,
+                fg_color="white",
+                text_color="black",
+                text_color_disabled="black",
+                border_width=0,
+                hover_color="#e6e6e6",
+            )
+            self.about_button.unbind("<Enter>")
+            self.about_button.unbind("<Leave>")
+            self._hide_disabled_about_tooltip(None)
+        else:
+            self.about_button.configure(
+                state="disabled",
+                hover=False,
+                fg_color="#3a3a3a",
+                text_color="black",
+                text_color_disabled="black",
+                border_color="white",
+                border_width=1,
+            )
+            self.about_button.bind("<Enter>", self._show_disabled_about_tooltip)
+            self.about_button.bind("<Leave>", self._hide_disabled_about_tooltip)
+
+    def _get_textbox_base_font(self, textbox: ctk.CTkTextbox) -> tkfont.Font:
+        """
+        Reads the current textbox font and returns a usable font object.
+
+        Args:
+            textbox: The textbox that will receive formatted text.
+
+        Returns:
+            A tkfont.Font instance for base text.
+
+        Raises:
+            None.
+        """
+        font_setting = textbox.cget("font")
+        if isinstance(font_setting, tkfont.Font):
+            return font_setting
+        if hasattr(font_setting, "cget"):
+            try:
+                return tkfont.Font(
+                    family=font_setting.cget("family"),
+                    size=font_setting.cget("size"),
+                    weight=font_setting.cget("weight"),
+                    slant=font_setting.cget("slant"),
+                )
+            except (tk.TclError, TypeError, ValueError):
+                pass
+        try:
+            return tkfont.Font(font=font_setting)
+        except (tk.TclError, TypeError):
+            return tkfont.Font(family="Arial", size=14)
+
+    def _build_markdown_fonts(self, base_font: tkfont.Font) -> dict[str, tkfont.Font]:
+        """
+        Creates font variants for markdown rendering.
+
+        Args:
+            base_font: The base font used by the textbox.
+
+        Returns:
+            Dictionary of font variants keyed by style name.
+
+        Raises:
+            None.
+        """
+        base_family = base_font.cget("family")
+        try:
+            base_size = abs(int(base_font.cget("size")))
+        except (TypeError, ValueError):
+            base_size = 14
+
+        base_weight = base_font.cget("weight") if hasattr(base_font, "cget") else "normal"
+        base_slant = base_font.cget("slant") if hasattr(base_font, "cget") else "roman"
+
+        base_font = tkfont.Font(
+            family=base_family,
+            size=base_size,
+            weight=base_weight,
+            slant=base_slant,
+        )
+        bold_font = tkfont.Font(
+            family=base_family,
+            size=base_size,
+            weight="bold",
+            slant=base_slant,
+        )
+        italic_font = tkfont.Font(
+            family=base_family,
+            size=base_size,
+            weight=base_weight,
+            slant="italic",
+        )
+        h1_font = tkfont.Font(
+            family=base_family,
+            size=base_size + 8,
+            weight="bold",
+        )
+        h2_font = tkfont.Font(
+            family=base_family,
+            size=base_size + 4,
+            weight="bold",
+        )
+
+        return {
+            "base": base_font,
+            "bold": bold_font,
+            "italic": italic_font,
+            "h1": h1_font,
+            "h2": h2_font,
+        }
+
+    def _insert_markdown_text(
+        self, textbox: tk.Text, text: str, base_tags: tuple[str, ...]
+    ) -> None:
+        """
+        Inserts a line of text with basic bold and italic styling.
+
+        Args:
+            textbox: The text widget that will receive formatted text.
+            text: The raw line content to insert.
+            base_tags: Tag tuple to apply to all inserted segments.
+
+        Returns:
+            None.
+
+        Raises:
+            None.
+        """
+        index = 0
+        while index < len(text):
+            if text.startswith("**", index):
+                end = text.find("**", index + 2)
+                if end != -1:
+                    segment = text[index + 2:end]
+                    textbox.insert("end", segment, base_tags + ("bold",))
+                    index = end + 2
+                    continue
+            if text.startswith("*", index):
+                end = text.find("*", index + 1)
+                if end != -1:
+                    segment = text[index + 1:end]
+                    textbox.insert("end", segment, base_tags + ("italic",))
+                    index = end + 1
+                    continue
+            textbox.insert("end", text[index], base_tags)
+            index += 1
+
+    def _render_markdown_to_textbox(
+        self, textbox: ctk.CTkTextbox, content: str
+    ) -> None:
+        """
+        Renders a small subset of markdown into the textbox.
+
+        Args:
+            textbox: The textbox that will receive formatted text.
+            content: Raw markdown content to render.
+
+        Returns:
+            None.
+
+        Raises:
+            None.
+        """
+        text_widget = textbox._textbox
+        text_widget.configure(state="normal")
+        text_widget.delete("1.0", "end")
+
+        base_font = self._get_textbox_base_font(textbox)
+        fonts = self._build_markdown_fonts(base_font)
+
+        text_widget.tag_config("base", font=fonts["base"])
+        text_widget.tag_config("bold", font=fonts["bold"])
+        text_widget.tag_config("italic", font=fonts["italic"])
+        text_widget.tag_config("h1", font=fonts["h1"])
+        text_widget.tag_config("h2", font=fonts["h2"])
+        text_widget.tag_config("bullet", lmargin1=20, lmargin2=20)
+
+        for line in content.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                text_widget.insert("end", "\n", ("base",))
+                continue
+            if stripped.startswith("# "):
+                self._insert_markdown_text(text_widget, stripped[2:].strip(), ("h1",))
+                text_widget.insert("end", "\n\n", ("base",))
+                continue
+            if stripped.startswith("## "):
+                self._insert_markdown_text(text_widget, stripped[3:].strip(), ("h2",))
+                text_widget.insert("end", "\n\n", ("base",))
+                continue
+            if stripped.startswith("- "):
+                text_widget.insert("end", "- ", ("bullet", "base"))
+                self._insert_markdown_text(text_widget, stripped[2:].strip(), ("bullet", "base"))
+                text_widget.insert("end", "\n", ("base",))
+                continue
+            self._insert_markdown_text(text_widget, line, ("base",))
+            text_widget.insert("end", "\n", ("base",))
+
+        text_widget.configure(state="disabled")
 
     def _update_day_hours(self, day_name: str) -> None:
         """
@@ -404,10 +646,7 @@ class TimeSheetApp(ctk.CTkFrame):
         self.calculate_button.pack(side="left", padx=10)
         self.about_button.pack(side="left", padx=10)
 
-        if not os.path.exists("readme.md"):
-            self.about_button.configure(state="disabled", hover=False)
-            self.about_button.bind("<Enter>", self._show_disabled_about_tooltip)
-            self.about_button.bind("<Leave>", self._hide_disabled_about_tooltip)
+        self._refresh_about_button_state()
 
         self.master.bind("<Return>", lambda _: self._calculate())
         
@@ -509,7 +748,7 @@ class TimeSheetApp(ctk.CTkFrame):
 
     def _show_about(self) -> None:
         """
-        Displays the About popup with readme.md contents.
+        Displays the About popup with ABOUT.md contents.
 
         Args:
             None.
@@ -520,18 +759,21 @@ class TimeSheetApp(ctk.CTkFrame):
         Raises:
             None.
         """
+        self._refresh_about_button_state()
+        if not self._about_path:
+            return
         popup = ctk.CTkToplevel(self)
         popup.title("About")
 
         textbox = ctk.CTkTextbox(popup, wrap="word", width=600, height=400)
         textbox.pack(padx=20, pady=20)
 
-        with open("readme.md", "r", encoding="utf-8") as file:
-            textbox.insert("1.0", file.read())
+        with open(self._about_path, "r", encoding="utf-8") as file:
+            content = file.read()
 
-        textbox.configure(state="disabled")
+        self._render_markdown_to_textbox(textbox, content)
 
-    def _show_disabled_about_tooltip(self, event: object) -> None:
+    def _show_disabled_about_tooltip(self, event: Optional[object]) -> None:
         """
         Shows a small tooltip explaining why About is disabled.
 
@@ -544,19 +786,22 @@ class TimeSheetApp(ctk.CTkFrame):
         Raises:
             None.
         """
+        self._refresh_about_button_state()
+        if self._about_path:
+            return
         if hasattr(self, "_about_tooltip") and self._about_tooltip is not None:
             return
         tooltip = ctk.CTkToplevel(self)
         tooltip.overrideredirect(True)
         tooltip.attributes("-topmost", True)
-        label = ctk.CTkLabel(tooltip, text="About disabled: readme.md not found", fg_color="#333333", text_color="white", corner_radius=4, padx=6, pady=4)
+        label = ctk.CTkLabel(tooltip, text="About disabled: src/ABOUT.md not found", fg_color="#333333", text_color="white", corner_radius=4, padx=6, pady=4)
         label.pack()
         x = self.about_button.winfo_rootx()
         y = self.about_button.winfo_rooty() - 30
         tooltip.geometry(f"+{x}+{y}")
         self._about_tooltip = tooltip
 
-    def _hide_disabled_about_tooltip(self, event: object) -> None:
+    def _hide_disabled_about_tooltip(self, event: Optional[object]) -> None:
         """
         Hides the About disabled tooltip.
 
