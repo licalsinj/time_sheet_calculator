@@ -50,7 +50,6 @@ class CalculationResult:
     successes: List[str]
     normalized_times: Dict[str, str]
 
-
 class TimeSheetService:
     """
     Service object responsible for parsing, validating, and calculating time sheet data.
@@ -78,12 +77,13 @@ class TimeSheetService:
         warnings: List[str] = []
         successes: List[str] = []
         normalized: Dict[str, str] = {}
-
+        field_errors: Dict[str, str] = {}
         daily_minutes: Dict[str, int] = {}
 
         # First pass: validate and compute daily minutes
         for day in days:
-            minutes, day_errors, day_warnings, day_normalized = self._process_day(day)
+            minutes, day_errors, day_warnings, day_normalized, day_field_errors = self._process_day(day)
+            field_errors.update(day_field_errors)
             normalized.update(day_normalized)
 
             if day_errors:
@@ -148,6 +148,7 @@ class TimeSheetService:
         errors: List[str] = []
         warnings: List[str] = []
         normalized: Dict[str, str] = {}
+        field_errors: Dict[str, str] = {}
 
         start_raw = day.start_time.strip()
         end_raw = day.end_time.strip()
@@ -155,11 +156,11 @@ class TimeSheetService:
 
         # Incomplete day logic
         if not start_raw and not end_raw:
-            return self.minutes_per_day_assumption, [], [], {}
+            return self.minutes_per_day_assumption, [], [], {}, {}
 
         if start_raw and not end_raw:
             if day.day_name.lower() != "friday":
-                return self.minutes_per_day_assumption, [], [], {}
+                return self.minutes_per_day_assumption, [], [], {}, {}
 
         # Parse start and end times
         start_minutes, start_display, start_error = self._parse_time(
@@ -176,15 +177,19 @@ class TimeSheetService:
 
         if start_error:
             errors.append(f"{day.day_name}: invalid start time")
+            field_errors[f"{day.day_name}_start"] = "Invalid start time"
         if end_error:
             errors.append(f"{day.day_name}: invalid end time")
-
+            field_errors[f"{day.day_name}_end"] = "Invalid end time"
+        
         if start_error or end_error:
-            return None, errors, warnings, normalized
+            return None, errors, warnings, normalized, field_errors
 
         if end_minutes <= start_minutes:
             errors.append(f"{day.day_name}: end time is before start time")
-            return None, errors, warnings, normalized
+            field_errors[f"{day.day_name}_end"] = "End time before start time"
+            return None, errors, warnings, normalized, field_errors
+
 
         duration_minutes = end_minutes - start_minutes
 
@@ -199,14 +204,18 @@ class TimeSheetService:
                     raise ValueError
             except ValueError:
                 errors.append(f"{day.day_name}: invalid lunch duration")
-                return None, errors, warnings, normalized
+                field_errors[f"{day.day_name}_lunch"] = "Invalid lunch duration"
+                return None, errors, warnings, normalized, field_errors
+
 
         if lunch_minutes > duration_minutes:
             errors.append(f"{day.day_name}: lunch exceeds shift length")
-            return None, errors, warnings, normalized
+            field_errors[f"{day.day_name}_lunch"] = "Lunch exceeds shift length"
+            return None, errors, warnings, normalized, field_errors
+
 
         worked_minutes = duration_minutes - lunch_minutes
-        return worked_minutes, errors, warnings, normalized
+        return worked_minutes, errors, warnings, normalized, field_errors
 
     # ------------------------------------------------------------------
     # Friday Logic
@@ -289,8 +298,9 @@ class TimeSheetService:
         raw = raw.lower().strip()
 
         match = re.match(
-            r"^(\d{1,2})(?::?(\d{2}))?\s*(am|pm)?$", raw
+            r"^(\d{1,2})(?::?(\d{0,2}))?\s*(a|p|am|pm)?$", raw
         )
+
 
         if not match:
             return None, None, True
@@ -298,6 +308,11 @@ class TimeSheetService:
         hour = int(match.group(1))
         minute = int(match.group(2) or 0)
         period = match.group(3)
+
+        if period == "a":
+            period = "am"
+        elif period == "p":
+            period = "pm"
 
         if hour > 23 or minute > 59:
             return None, None, True
@@ -308,9 +323,14 @@ class TimeSheetService:
             if period == "pm":
                 hour += 12
         else:
-            if hour <= 12:
-                if not assume_am:
+            # No AM/PM provided, apply default assumption
+            if assume_am:
+                if hour == 12:
+                    hour = 0
+            else:
+                if hour != 12:
                     hour += 12
+
 
         minutes = hour * 60 + minute
         return minutes, self._minutes_to_display(minutes), False
