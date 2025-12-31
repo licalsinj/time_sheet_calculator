@@ -88,6 +88,8 @@ class TimeSheetApp(ctk.CTkFrame):
         # Incomplete rows clear the hours display
         if not start_raw or not end_raw:
             fields["hours"].configure(text="")
+            # Clear warning highlight if lunch gets filled later
+            fields["lunch"].configure(border_color=DEFAULT_BORDER_COLOR)
             return
 
         start_minutes, _, start_error = self.service._parse_time(
@@ -110,14 +112,17 @@ class TimeSheetApp(ctk.CTkFrame):
         # Lunch handling with silent failure on bad input
         if not lunch_raw:
             lunch_minutes = 60
+            fields["lunch"].configure(border_color="yellow")
         else:
             try:
                 lunch_minutes = int(lunch_raw)
                 if lunch_minutes < 0:
                     raise ValueError
             except ValueError:
+                fields["lunch"].configure(border_color="red")
                 fields["hours"].configure(text="")
                 return
+            fields["lunch"].configure(border_color=DEFAULT_BORDER_COLOR)
 
         if lunch_minutes > duration:
             fields["hours"].configure(text="")
@@ -284,6 +289,12 @@ class TimeSheetApp(ctk.CTkFrame):
             )
 
         result = self.service.calculate_week(day_inputs)
+
+        # Highlight lunch warnings (blank lunch assumed)
+        for day in self.days:
+            lunch_value = self.entries[day]["lunch"].get().strip()
+            if not lunch_value:
+                self.entries[day]["lunch"].configure(border_color="yellow")
 
         # Apply red borders to invalid fields (always, even if errors exist)
         for field_key in getattr(result, "field_errors", {}):

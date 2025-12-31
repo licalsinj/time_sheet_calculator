@@ -38,6 +38,7 @@ class CalculationResult:
         hours_to_40: Absolute difference from 40 hours
         friday_clock_out: Calculated Friday clock out time string
         daily_hours: Mapping of day name to worked hours
+        field_errors: Mapping of field identifiers to error messages
         errors: List of blocking error messages
         warnings: List of non-blocking warning messages
         successes: List of informational success messages
@@ -47,6 +48,7 @@ class CalculationResult:
     hours_to_40: Optional[float]
     friday_clock_out: Optional[str]
     daily_hours: Dict[str, float]
+    field_errors: Dict[str, str]
     errors: List[str]
     warnings: List[str]
     successes: List[str]
@@ -103,6 +105,7 @@ class TimeSheetService:
                 hours_to_40=None,
                 friday_clock_out=None,
                 daily_hours={},
+                field_errors=field_errors,
                 errors=errors,
                 warnings=warnings,
                 successes=successes,
@@ -117,10 +120,17 @@ class TimeSheetService:
         total_minutes = sum(daily_minutes.values())
         total_hours = self._round_to_quarter(total_minutes / 60)
 
-        hours_to_40 = abs(self._round_to_quarter((40 * 60 - total_minutes) / 60))
+        hours_to_40 = self._round_to_quarter((40 * 60 - total_minutes) / 60)
 
         friday_clock_out = self._calculate_friday_clock_out(
-            days, total_minutes, warnings, successes, normalized
+            days,
+            pre_friday_minutes=sum(
+                minutes for name, minutes in daily_minutes.items() if name.lower() != "friday"
+            ),
+            friday_minutes=daily_minutes.get("Friday"),
+            warnings=warnings,
+            successes=successes,
+            normalized=normalized,
         )
 
         return CalculationResult(
@@ -128,6 +138,7 @@ class TimeSheetService:
             hours_to_40=hours_to_40,
             friday_clock_out=friday_clock_out,
             daily_hours=daily_hours,
+            field_errors=field_errors,
             errors=errors,
             warnings=warnings,
             successes=successes,
@@ -140,7 +151,7 @@ class TimeSheetService:
 
     def _process_day(
         self, day: DayInput
-    ) -> Tuple[Optional[int], List[str], List[str], Dict[str, str]]:
+    ) -> Tuple[Optional[int], List[str], List[str], Dict[str, str], Dict[str, str]]:
         """
         Validates and calculates worked minutes for a single day.
 
@@ -170,6 +181,32 @@ class TimeSheetService:
         if start_raw and not end_raw:
             if day.day_name.lower() != "friday":
                 return self.minutes_per_day_assumption, [], [], {}, {}
+            # Friday: allow estimating clock-out without an end time; no minutes added
+            start_minutes, start_display, start_error = self._parse_time(
+                start_raw, assume_am=True
+            )
+            if start_display:
+                normalized[f"{day.day_name}_start"] = start_display
+            if start_error:
+                errors.append(f"{day.day_name}: invalid start time")
+                field_errors[f"{day.day_name}_start"] = "Invalid start time"
+                return None, errors, warnings, normalized, field_errors
+
+            # Lunch handling for Friday partial entry
+            if not lunch_raw:
+                lunch_minutes = 60
+                warnings.append(f"{day.day_name}: lunch assumed to be 60 minutes")
+            else:
+                try:
+                    lunch_minutes = int(lunch_raw)
+                    if lunch_minutes < 0:
+                        raise ValueError
+                except ValueError:
+                    errors.append(f"{day.day_name}: invalid lunch duration")
+                    field_errors[f"{day.day_name}_lunch"] = "Invalid lunch duration"
+                    return None, errors, warnings, normalized, field_errors
+
+            return None, errors, warnings, normalized, field_errors
 
         # Parse start and end times
         start_minutes, start_display, start_error = self._parse_time(
@@ -233,7 +270,8 @@ class TimeSheetService:
     def _calculate_friday_clock_out(
         self,
         days: List[DayInput],
-        total_minutes: int,
+        pre_friday_minutes: int,
+        friday_minutes: Optional[int],
         warnings: List[str],
         successes: List[str],
         normalized: Dict[str, str],
@@ -243,7 +281,8 @@ class TimeSheetService:
 
         Args:
             days: List of DayInput
-            total_minutes: Minutes worked so far
+            pre_friday_minutes: Minutes worked before Friday
+            friday_minutes: Minutes worked on Friday (if completed)
             warnings: Warning message accumulator
             successes: Success message accumulator
             normalized: Normalized value accumulator
@@ -253,7 +292,7 @@ class TimeSheetService:
         """
         friday = next(d for d in days if d.day_name.lower() == "friday")
 
-        if total_minutes >= 40 * 60:
+        if pre_friday_minutes >= 40 * 60:
             successes.append("40 hours reached before Friday this week")
             return normalized.get("Friday_start", "8:00 AM")
 
@@ -272,11 +311,27 @@ class TimeSheetService:
 
         if not lunch_raw:
             lunch_minutes = 60
-            warnings.append("Friday lunch assumed to be 60 minutes")
+            warning_text = "Friday: lunch assumed to be 60 minutes"
+            if warning_text not in warnings:
+                warnings.append(warning_text)
         else:
-            lunch_minutes = int(lunch_raw)
+            try:
+                lunch_minutes = int(lunch_raw)
+                if lunch_minutes < 0:
+                    raise ValueError
+            except ValueError:
+                return None
 
-        remaining_minutes = (40 * 60) - total_minutes + lunch_minutes
+        # If Friday already has an end time, return it
+        if friday.end_time.strip():
+            _, end_display, end_error = self._parse_time(
+                friday.end_time.strip(), assume_am=False
+            )
+            if not end_error and end_display:
+                normalized["Friday_end"] = end_display
+                return end_display
+
+        remaining_minutes = (40 * 60) - pre_friday_minutes + lunch_minutes
         clock_out_minutes = start_minutes + remaining_minutes
 
         return self._minutes_to_display(clock_out_minutes)
