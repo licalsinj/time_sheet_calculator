@@ -16,24 +16,42 @@ class TimeSheetApp(ctk.CTkFrame):
     Main application frame containing all UI elements.
     """
 
-    def __init__(self, master):
+    def __init__(self, master: ctk.CTk) -> None:
+        """
+        Sets up the frame, service, and UI layout.
+
+        Args:
+            master: Root CustomTkinter application window.
+
+        Returns:
+            None.
+
+        Raises:
+            None.
+        """
         super().__init__(master)
         self.service = TimeSheetService()
         self.days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-        self.entries = {}
+        self.entries: dict[str, dict[str, object]] = {}
         self._build_ui()
     # ----------------
     # Helper Methods
     # -----------------
     
-    def _auto_insert_colon(self, event, entry: ctk.CTkEntry):
+    def _auto_insert_colon(self, event: object, entry: ctk.CTkEntry) -> None:
         """
         Automatically inserts a colon after the hour portion of a time
         while the user is typing.
 
         Args:
-            event: Tkinter key event
-            entry: The CTkEntry widget being typed into
+            event: Tkinter key event.
+            entry: The CTkEntry widget being typed into.
+
+        Returns:
+            None.
+
+        Raises:
+            None.
         """
         # Ignore backspace, delete, and navigation keys
         if event.keysym in ("BackSpace", "Delete", "Left", "Right", "Home", "End"):
@@ -49,17 +67,37 @@ class TimeSheetApp(ctk.CTkFrame):
         if value.isdigit() and len(value) in (1, 2):
             entry.insert("end", ":")
 
-    def _clear_validation_styles(self):
+    def _clear_validation_styles(self) -> None:
         """
         Resets all entry widgets to default border.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Raises:
+            None.
         """
         for day_fields in self.entries.values():
             for key in ("start", "end", "lunch"):
                 entry = day_fields[key]
                 entry.configure(border_color=DEFAULT_BORDER_COLOR)
 
-    def _clear_hours_labels(self):
-        """Clears the per-day hours labels."""
+    def _clear_hours_labels(self) -> None:
+        """
+        Clears the per-day hours labels.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Raises:
+            None.
+        """
         for day_fields in self.entries.values():
             day_fields["hours"].configure(text="")
 
@@ -68,17 +106,29 @@ class TimeSheetApp(ctk.CTkFrame):
         Formats hour values by trimming unnecessary trailing zeros.
 
         Args:
-            value: Hour value to display
+            value: Hour value to display.
 
         Returns:
-            Human-friendly string (e.g., 8 -> "8", 7.5 -> "7.5")
+            Human-friendly string (e.g., 8 -> "8", 7.5 -> "7.5").
+
+        Raises:
+            None.
         """
         return f"{value:.2f}".rstrip("0").rstrip(".")
 
-    def _update_day_hours(self, day_name: str):
+    def _update_day_hours(self, day_name: str) -> None:
         """
         Attempts to compute and display hours for a single day based on current row inputs.
         Silent failure: clears the hours label when inputs are invalid or incomplete.
+
+        Args:
+            day_name: Name of the weekday whose row should be recalculated.
+
+        Returns:
+            None.
+
+        Raises:
+            None.
         """
         fields = self.entries[day_name]
         start_raw = fields["start"].get().strip()
@@ -132,13 +182,19 @@ class TimeSheetApp(ctk.CTkFrame):
         worked_hours = self.service._round_to_quarter(worked_minutes / 60)
         fields["hours"].configure(text=self._format_hours_display(worked_hours))
 
-    def _normalize_time_entry(self, entry: ctk.CTkEntry, assume_am: bool):
+    def _normalize_time_entry(self, entry: ctk.CTkEntry, assume_am: bool) -> None:
         """
         Normalizes a time entry field when focus is lost.
 
         Args:
-            entry: The CTkEntry widget to normalize
-            assume_am: Whether to assume AM if no period is provided
+            entry: The CTkEntry widget to normalize.
+            assume_am: Whether to assume AM if no period is provided.
+
+        Returns:
+            None.
+
+        Raises:
+            None.
         """
         raw_value = entry.get().strip()
 
@@ -159,8 +215,20 @@ class TimeSheetApp(ctk.CTkFrame):
         entry.insert(0, display)
 
 
-    def _build_ui(self):
-        """Constructs the UI layout."""
+    def _build_ui(self) -> None:
+        """
+        Constructs the UI layout and binds all interactions.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Raises:
+            None.
+        """
+        # Establish padding to keep the layout readable
         self.pack(fill="both", expand=True, padx=20, pady=20)
 
         # KPI Section
@@ -197,15 +265,56 @@ class TimeSheetApp(ctk.CTkFrame):
             hours = ctk.CTkLabel(self, text="")
 
             # Normalize times when the user tabs or clicks away
-            def on_start_focus_out(event, entry=start, day=day):
+            def on_start_focus_out(event: object, entry=start, day=day) -> None:
+                """
+                Normalizes start time and refreshes row hours when start loses focus.
+
+                Args:
+                    event: Tkinter focus event.
+                    entry: Start entry widget for the day.
+                    day: Name of the weekday being updated.
+
+                Returns:
+                    None.
+
+                Raises:
+                    None.
+                """
                 self._normalize_time_entry(entry, assume_am=True)
                 self._update_day_hours(day)
 
-            def on_end_focus_out(event, entry=end, day=day):
+            def on_end_focus_out(event: object, entry=end, day=day) -> None:
+                """
+                Normalizes end time and refreshes row hours when end loses focus.
+
+                Args:
+                    event: Tkinter focus event.
+                    entry: End entry widget for the day.
+                    day: Name of the weekday being updated.
+
+                Returns:
+                    None.
+
+                Raises:
+                    None.
+                """
                 self._normalize_time_entry(entry, assume_am=False)
                 self._update_day_hours(day)
 
-            def on_lunch_focus_out(event, day=day):
+            def on_lunch_focus_out(event: object, day=day) -> None:
+                """
+                Refreshes row hours when lunch loses focus.
+
+                Args:
+                    event: Tkinter focus event.
+                    day: Name of the weekday being updated.
+
+                Returns:
+                    None.
+
+                Raises:
+                    None.
+                """
                 self._update_day_hours(day)
 
             start.bind("<FocusOut>", on_start_focus_out)
@@ -268,12 +377,24 @@ class TimeSheetApp(ctk.CTkFrame):
 
         self.master.bind("<Return>", lambda _: self._calculate())
         
-    def _calculate(self):
-        """Collects input, runs calculation, applies validation highlighting, and updates UI."""
+    def _calculate(self) -> None:
+        """
+        Collects input, runs calculation, applies validation highlighting, and updates UI.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Raises:
+            None.
+        """
         self._clear_validation_styles()
         self.message_label.configure(text="")
         self._clear_hours_labels()
 
+        # Collect all five days of input into service-friendly objects
         day_inputs = []
         for day in self.days:
             start = self.entries[day]["start"]
@@ -344,8 +465,19 @@ class TimeSheetApp(ctk.CTkFrame):
             )
 
 
-    def _show_about(self):
-        """Displays the About popup with readme.md contents."""
+    def _show_about(self) -> None:
+        """
+        Displays the About popup with readme.md contents.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Raises:
+            None.
+        """
         popup = ctk.CTkToplevel(self)
         popup.title("About")
 
@@ -358,8 +490,19 @@ class TimeSheetApp(ctk.CTkFrame):
         textbox.configure(state="disabled")
 
 
-def main():
-    """Application entry point."""
+def main() -> None:
+    """
+    Application entry point that creates the root window and starts the event loop.
+
+    Args:
+        None.
+
+    Returns:
+        None.
+
+    Raises:
+        None.
+    """
     app = ctk.CTk()
     app.title("Time Sheet Calculator")
     TimeSheetApp(app)

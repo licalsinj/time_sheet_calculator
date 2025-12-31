@@ -60,7 +60,18 @@ class TimeSheetService:
     """
 
     def __init__(self) -> None:
-        """Initializes the service."""
+        """
+        Initializes the service defaults.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Raises:
+            None.
+        """
         self.minutes_per_day_assumption = 8 * 60
 
     # ------------------------------------------------------------------
@@ -72,10 +83,13 @@ class TimeSheetService:
         Performs full validation and calculation for the work week.
 
         Args:
-            days: List of DayInput objects for Monday through Friday
+            days: List of DayInput objects for Monday through Friday.
 
         Returns:
-            CalculationResult containing totals, messages, and normalized values
+            CalculationResult containing totals, messages, per-day hours, and normalized values.
+
+        Raises:
+            None.
         """
         errors: List[str] = []
         warnings: List[str] = []
@@ -156,14 +170,18 @@ class TimeSheetService:
         Validates and calculates worked minutes for a single day.
 
         Args:
-            day: DayInput object
+            day: DayInput object representing one weekday.
 
         Returns:
             Tuple of:
-                - minutes worked (or None)
-                - list of error messages
-                - list of warning messages
-                - normalized display values
+                - minutes worked (or None).
+                - list of error messages.
+                - list of warning messages.
+                - normalized display values.
+                - field-level error metadata.
+
+        Raises:
+            None.
         """
         errors: List[str] = []
         warnings: List[str] = []
@@ -280,15 +298,18 @@ class TimeSheetService:
         Calculates Friday clock out time needed to reach 40 hours.
 
         Args:
-            days: List of DayInput
-            pre_friday_minutes: Minutes worked before Friday
-            friday_minutes: Minutes worked on Friday (if completed)
-            warnings: Warning message accumulator
-            successes: Success message accumulator
-            normalized: Normalized value accumulator
+            days: List of DayInput.
+            pre_friday_minutes: Minutes worked before Friday.
+            friday_minutes: Minutes worked on Friday (if completed).
+            warnings: Warning message accumulator.
+            successes: Success message accumulator.
+            normalized: Normalized value accumulator.
 
         Returns:
-            Clock out time string or None
+            Clock out time string or None.
+
+        Raises:
+            None.
         """
         friday = next(d for d in days if d.day_name.lower() == "friday")
 
@@ -347,14 +368,17 @@ class TimeSheetService:
         Parses a time string into minutes since midnight.
 
         Args:
-            raw: Raw time input string
-            assume_am: Whether to assume AM if no period is provided
+            raw: Raw time input string.
+            assume_am: Whether to assume AM if no period is provided.
 
         Returns:
             Tuple of:
-                - minutes since midnight
-                - normalized display string
-                - error flag
+                - minutes since midnight.
+                - normalized display string.
+                - error flag.
+
+        Raises:
+            None.
         """
         if not raw:
             return None, None, True
@@ -404,10 +428,13 @@ class TimeSheetService:
         Converts minutes since midnight to hh:mm AM/PM format.
 
         Args:
-            minutes: Minutes since midnight
+            minutes: Minutes since midnight.
 
         Returns:
-            Formatted time string
+            Formatted time string.
+
+        Raises:
+            None.
         """
         hour = (minutes // 60) % 24
         minute = minutes % 60
@@ -422,10 +449,13 @@ class TimeSheetService:
         Rounds a float to the nearest quarter hour.
 
         Args:
-            value: Hour value
+            value: Hour value.
 
         Returns:
-            Rounded hour value
+            Rounded hour value.
+
+        Raises:
+            None.
         """
         rounded = round(value * 4) / 4
         return round(rounded, 2)
