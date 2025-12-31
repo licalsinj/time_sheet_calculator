@@ -1,5 +1,8 @@
 # Coding Style Guide
 
+## Interactions
+When fixing an issue or implementing a new feature please tell me how to test it. Both happy path and edge cases to test. Doesn't have to be extensive (i.e. leave out "launch the app" but should be descriptive of the feature implemented)
+
 ## Commenting Code
 When commenting the code make sure to use the following rules: 
 Comment the code so that someone who's never coded can understand them. 

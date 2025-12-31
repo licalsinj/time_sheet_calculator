@@ -191,14 +191,44 @@ class TimeSheetService:
         start_raw = day.start_time.strip()
         end_raw = day.end_time.strip()
         lunch_raw = day.lunch_minutes.strip()
+        has_start = bool(start_raw)
+        has_end = bool(end_raw)
+        has_lunch = bool(lunch_raw)
 
         # Incomplete day logic
-        if not start_raw and not end_raw:
-            return self.minutes_per_day_assumption, [], [], {}, {}
+        if not has_start and not has_end:
+            if has_lunch:
+                try:
+                    lunch_minutes = int(lunch_raw)
+                    if lunch_minutes < 0:
+                        raise ValueError
+                except ValueError:
+                    errors.append(f"{day.day_name}: invalid lunch duration")
+                    field_errors[f"{day.day_name}_lunch"] = "Invalid lunch duration"
+                    return None, errors, warnings, normalized, field_errors
+            return self.minutes_per_day_assumption, errors, warnings, normalized, field_errors
 
-        if start_raw and not end_raw:
+        if has_start and not has_end:
             if day.day_name.lower() != "friday":
-                return self.minutes_per_day_assumption, [], [], {}, {}
+                start_minutes, start_display, start_error = self._parse_time(
+                    start_raw, assume_am=True
+                )
+                if start_display:
+                    normalized[f"{day.day_name}_start"] = start_display
+                if start_error:
+                    errors.append(f"{day.day_name}: invalid start time")
+                    field_errors[f"{day.day_name}_start"] = "Invalid start time"
+                    return None, errors, warnings, normalized, field_errors
+                if has_lunch:
+                    try:
+                        lunch_minutes = int(lunch_raw)
+                        if lunch_minutes < 0:
+                            raise ValueError
+                    except ValueError:
+                        errors.append(f"{day.day_name}: invalid lunch duration")
+                        field_errors[f"{day.day_name}_lunch"] = "Invalid lunch duration"
+                        return None, errors, warnings, normalized, field_errors
+                return self.minutes_per_day_assumption, errors, warnings, normalized, field_errors
             # Friday: allow estimating clock-out without an end time; no minutes added
             start_minutes, start_display, start_error = self._parse_time(
                 start_raw, assume_am=True
@@ -225,6 +255,27 @@ class TimeSheetService:
                     return None, errors, warnings, normalized, field_errors
 
             return None, errors, warnings, normalized, field_errors
+
+        if not has_start and has_end:
+            end_minutes, end_display, end_error = self._parse_time(
+                end_raw, assume_am=False
+            )
+            if end_display:
+                normalized[f"{day.day_name}_end"] = end_display
+            if end_error:
+                errors.append(f"{day.day_name}: invalid end time")
+                field_errors[f"{day.day_name}_end"] = "Invalid end time"
+                return None, errors, warnings, normalized, field_errors
+            if has_lunch:
+                try:
+                    lunch_minutes = int(lunch_raw)
+                    if lunch_minutes < 0:
+                        raise ValueError
+                except ValueError:
+                    errors.append(f"{day.day_name}: invalid lunch duration")
+                    field_errors[f"{day.day_name}_lunch"] = "Invalid lunch duration"
+                    return None, errors, warnings, normalized, field_errors
+            return self.minutes_per_day_assumption, errors, warnings, normalized, field_errors
 
         # Parse start and end times
         start_minutes, start_display, start_error = self._parse_time(

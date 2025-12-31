@@ -444,6 +444,56 @@ class TimeSheetApp(ctk.CTkFrame):
         worked_hours = self.service._round_to_quarter(worked_minutes / 60)
         fields["hours"].configure(text=self._format_hours_display(worked_hours))
 
+    def _validate_time_entry(self, entry: ctk.CTkEntry, assume_am: bool) -> None:
+        """
+        Validates a time entry for basic format and highlights errors.
+
+        Args:
+            entry: The CTkEntry widget to validate.
+            assume_am: Whether to assume AM if no period is provided.
+
+        Returns:
+            None.
+
+        Raises:
+            None.
+        """
+        value = entry.get().strip()
+        if not value:
+            entry.configure(border_color=DEFAULT_BORDER_COLOR)
+            return
+        _, _, error = self.service._parse_time(value, assume_am=assume_am)
+        if error:
+            entry.configure(border_color="red")
+        else:
+            entry.configure(border_color=DEFAULT_BORDER_COLOR)
+
+    def _validate_lunch_entry(self, entry: ctk.CTkEntry) -> None:
+        """
+        Validates a lunch entry for numeric and non-negative values.
+
+        Args:
+            entry: The CTkEntry widget to validate.
+
+        Returns:
+            None.
+
+        Raises:
+            None.
+        """
+        value = entry.get().strip()
+        if not value:
+            entry.configure(border_color=DEFAULT_BORDER_COLOR)
+            return
+        try:
+            minutes = int(value)
+            if minutes < 0:
+                raise ValueError
+        except ValueError:
+            entry.configure(border_color="red")
+            return
+        entry.configure(border_color=DEFAULT_BORDER_COLOR)
+
     def _normalize_time_entry(self, entry: ctk.CTkEntry, assume_am: bool) -> None:
         """
         Normalizes a time entry field when focus is lost.
@@ -555,6 +605,7 @@ class TimeSheetApp(ctk.CTkFrame):
                     None.
                 """
                 self._normalize_time_entry(entry, assume_am=True)
+                self._validate_time_entry(entry, assume_am=True)
                 self._update_day_hours(day)
 
             def on_end_focus_out(event: object, entry=end, day=day) -> None:
@@ -573,6 +624,7 @@ class TimeSheetApp(ctk.CTkFrame):
                     None.
                 """
                 self._normalize_time_entry(entry, assume_am=False)
+                self._validate_time_entry(entry, assume_am=False)
                 self._update_day_hours(day)
 
             def on_lunch_focus_out(event: object, day=day) -> None:
@@ -589,6 +641,7 @@ class TimeSheetApp(ctk.CTkFrame):
                 Raises:
                     None.
                 """
+                self._validate_lunch_entry(self.entries[day]["lunch"])
                 self._update_day_hours(day)
 
             start.bind("<FocusOut>", on_start_focus_out)
@@ -620,8 +673,17 @@ class TimeSheetApp(ctk.CTkFrame):
             }
 
         # Messages
-        self.message_label = ctk.CTkLabel(self, text="", text_color="red")
-        self.message_label.grid(row=9, column=0, columnspan=5)
+        message_frame = ctk.CTkFrame(self, fg_color="transparent")
+        message_frame.grid(row=9, column=0, columnspan=5, pady=(6, 0))
+        message_frame.grid_columnconfigure(0, weight=1)
+
+        self.error_label = ctk.CTkLabel(message_frame, text="", text_color="red")
+        self.warning_label = ctk.CTkLabel(message_frame, text="", text_color="yellow")
+        self.success_label = ctk.CTkLabel(message_frame, text="", text_color="green")
+
+        self.error_label.grid(row=0, column=0, sticky="nsew")
+        self.warning_label.grid(row=1, column=0, sticky="nsew")
+        self.success_label.grid(row=2, column=0, sticky="nsew")
 
         # Button container (centers buttons horizontally)
         button_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -664,7 +726,9 @@ class TimeSheetApp(ctk.CTkFrame):
             None.
         """
         self._clear_validation_styles()
-        self.message_label.configure(text="")
+        self.error_label.configure(text="")
+        self.warning_label.configure(text="")
+        self.success_label.configure(text="")
         self._clear_hours_labels()
         self._clear_kpis()
 
@@ -702,21 +766,18 @@ class TimeSheetApp(ctk.CTkFrame):
 
         # Display errors and exit early if any
         if result.errors:
-            self.message_label.configure(
-                text="\n".join(result.errors),
-                text_color="red"
-            )
+            message_lines = list(result.errors)
+            if result.warnings:
+                message_lines.extend(result.warnings)
+            self.error_label.configure(text="\n".join(result.errors))
+            if result.warnings:
+                self.warning_label.configure(text="\n".join(result.warnings))
             self._clear_kpis()
             return
 
         # Display warnings (yellow)
         if result.warnings:
-            self.message_label.configure(
-                text="\n".join(result.warnings),
-                text_color="yellow"
-            )
-        else:
-            self.message_label.configure(text="")
+            self.warning_label.configure(text="\n".join(result.warnings))
 
         # Update KPIs
         self.total_hours_value.configure(text=str(result.total_hours))
@@ -740,10 +801,7 @@ class TimeSheetApp(ctk.CTkFrame):
 
         # Success messages (green)
         if getattr(result, "successes", []):
-            self.message_label.configure(
-                text="\n".join(result.successes),
-                text_color="green"
-            )
+            self.success_label.configure(text="\n".join(result.successes))
 
 
     def _show_about(self) -> None:
