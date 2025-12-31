@@ -71,7 +71,8 @@ All hour totals:
 ### Validation
 - Invalid or missing time formats produce errors
 - Negative time ranges (end before start) are not allowed
-- Blank lunch duration is invalid (0 is allowed)
+- Blank lunch duration is assumed to be 60 (0 is allowed and makes lunch to be 0 mins)
+- Negative and non numeric lunch durations are considered invalid and should be made red with an error message and stop calculations
 
 ### Visual Feedback
 - Invalid fields receive a red border
@@ -89,7 +90,7 @@ All hour totals:
 Displayed at the top of the UI after successful calculation:
 
 - Total Hours Worked
-- Hours to 40 (green if over, red if under)
+- Hours to 40 (green if over)
 - Friday Clock-Out Time
 
 Values remain visible between runs unless the app is restarted.
