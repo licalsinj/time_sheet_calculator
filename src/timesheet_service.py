@@ -37,6 +37,7 @@ class CalculationResult:
         total_hours: Total hours worked so far
         hours_to_40: Absolute difference from 40 hours
         friday_clock_out: Calculated Friday clock out time string
+        daily_hours: Mapping of day name to worked hours
         errors: List of blocking error messages
         warnings: List of non-blocking warning messages
         successes: List of informational success messages
@@ -45,6 +46,7 @@ class CalculationResult:
     total_hours: Optional[float]
     hours_to_40: Optional[float]
     friday_clock_out: Optional[str]
+    daily_hours: Dict[str, float]
     errors: List[str]
     warnings: List[str]
     successes: List[str]
@@ -100,11 +102,17 @@ class TimeSheetService:
                 total_hours=None,
                 hours_to_40=None,
                 friday_clock_out=None,
+                daily_hours={},
                 errors=errors,
                 warnings=warnings,
                 successes=successes,
                 normalized_times=normalized,
             )
+
+        daily_hours = {
+            day: self._round_to_quarter(minutes / 60)
+            for day, minutes in daily_minutes.items()
+        }
 
         total_minutes = sum(daily_minutes.values())
         total_hours = self._round_to_quarter(total_minutes / 60)
@@ -119,6 +127,7 @@ class TimeSheetService:
             total_hours=total_hours,
             hours_to_40=hours_to_40,
             friday_clock_out=friday_clock_out,
+            daily_hours=daily_hours,
             errors=errors,
             warnings=warnings,
             successes=successes,

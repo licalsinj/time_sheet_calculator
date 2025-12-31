@@ -8,7 +8,7 @@
             "name": "Python Debugger: Run App",
             "type": "debugpy",
             "request": "launch",
-            "module": "main",
+            "module": "app",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/src",
             "env": {

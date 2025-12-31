@@ -58,6 +58,75 @@ class TimeSheetApp(ctk.CTkFrame):
                 entry = day_fields[key]
                 entry.configure(border_color=DEFAULT_BORDER_COLOR)
 
+    def _clear_hours_labels(self):
+        """Clears the per-day hours labels."""
+        for day_fields in self.entries.values():
+            day_fields["hours"].configure(text="")
+
+    def _format_hours_display(self, value: float) -> str:
+        """
+        Formats hour values by trimming unnecessary trailing zeros.
+
+        Args:
+            value: Hour value to display
+
+        Returns:
+            Human-friendly string (e.g., 8 -> "8", 7.5 -> "7.5")
+        """
+        return f"{value:.2f}".rstrip("0").rstrip(".")
+
+    def _update_day_hours(self, day_name: str):
+        """
+        Attempts to compute and display hours for a single day based on current row inputs.
+        Silent failure: clears the hours label when inputs are invalid or incomplete.
+        """
+        fields = self.entries[day_name]
+        start_raw = fields["start"].get().strip()
+        end_raw = fields["end"].get().strip()
+        lunch_raw = fields["lunch"].get().strip()
+
+        # Incomplete rows clear the hours display
+        if not start_raw or not end_raw:
+            fields["hours"].configure(text="")
+            return
+
+        start_minutes, _, start_error = self.service._parse_time(
+            start_raw, assume_am=True
+        )
+        end_minutes, _, end_error = self.service._parse_time(
+            end_raw, assume_am=False
+        )
+
+        if start_error or end_error or start_minutes is None or end_minutes is None:
+            fields["hours"].configure(text="")
+            return
+
+        if end_minutes <= start_minutes:
+            fields["hours"].configure(text="")
+            return
+
+        duration = end_minutes - start_minutes
+
+        # Lunch handling with silent failure on bad input
+        if not lunch_raw:
+            lunch_minutes = 60
+        else:
+            try:
+                lunch_minutes = int(lunch_raw)
+                if lunch_minutes < 0:
+                    raise ValueError
+            except ValueError:
+                fields["hours"].configure(text="")
+                return
+
+        if lunch_minutes > duration:
+            fields["hours"].configure(text="")
+            return
+
+        worked_minutes = duration - lunch_minutes
+        worked_hours = self.service._round_to_quarter(worked_minutes / 60)
+        fields["hours"].configure(text=self._format_hours_display(worked_hours))
+
     def _normalize_time_entry(self, entry: ctk.CTkEntry, assume_am: bool):
         """
         Normalizes a time entry field when focus is lost.
@@ -123,15 +192,20 @@ class TimeSheetApp(ctk.CTkFrame):
             hours = ctk.CTkLabel(self, text="")
 
             # Normalize times when the user tabs or clicks away
-            start.bind(
-                "<FocusOut>",
-                lambda e, entry=start: self._normalize_time_entry(entry, assume_am=True),
-            )
+            def on_start_focus_out(event, entry=start, day=day):
+                self._normalize_time_entry(entry, assume_am=True)
+                self._update_day_hours(day)
 
-            end.bind(
-                "<FocusOut>",
-                lambda e, entry=end: self._normalize_time_entry(entry, assume_am=False),
-            )
+            def on_end_focus_out(event, entry=end, day=day):
+                self._normalize_time_entry(entry, assume_am=False)
+                self._update_day_hours(day)
+
+            def on_lunch_focus_out(event, day=day):
+                self._update_day_hours(day)
+
+            start.bind("<FocusOut>", on_start_focus_out)
+            end.bind("<FocusOut>", on_end_focus_out)
+            lunch.bind("<FocusOut>", on_lunch_focus_out)
 
             # Auto-insert colon while typing
             start.bind(
@@ -193,6 +267,7 @@ class TimeSheetApp(ctk.CTkFrame):
         """Collects input, runs calculation, applies validation highlighting, and updates UI."""
         self._clear_validation_styles()
         self.message_label.configure(text="")
+        self._clear_hours_labels()
 
         day_inputs = []
         for day in self.days:
@@ -242,6 +317,13 @@ class TimeSheetApp(ctk.CTkFrame):
 
         if result.friday_clock_out:
             self.friday_value.configure(text=result.friday_clock_out)
+
+        # Per-day hours column
+        for day in self.days:
+            hours_value = result.daily_hours.get(day)
+            if hours_value is not None:
+                display = self._format_hours_display(hours_value)
+                self.entries[day]["hours"].configure(text=display)
 
         # Success messages (green)
         if getattr(result, "successes", []):
