@@ -7,6 +7,7 @@ CustomTkinter user interface for the time sheet calculator.
 import os
 import customtkinter as ctk
 from timesheet_service import TimeSheetService, DayInput
+from typing import Optional
 
 # CONSTANTS
 DEFAULT_BORDER_COLOR = "#444444"
@@ -33,6 +34,7 @@ class TimeSheetApp(ctk.CTkFrame):
         self.service = TimeSheetService()
         self.days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
         self.entries: dict[str, dict[str, object]] = {}
+        self._about_tooltip: Optional[ctk.CTkToplevel] = None
         self._build_ui()
     # ----------------
     # Helper Methods
@@ -100,6 +102,24 @@ class TimeSheetApp(ctk.CTkFrame):
         """
         for day_fields in self.entries.values():
             day_fields["hours"].configure(text="")
+
+    def _clear_kpis(self) -> None:
+        """
+        Clears the KPI displays at the top of the UI.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Raises:
+            None.
+        """
+        self.total_hours_value.configure(text="")
+        self.hours_to_40_value.configure(text="")
+        self.friday_value.configure(text="")
+        self.hours_to_40_value.configure(text_color=self._hours_to_40_default_color)
 
     def _format_hours_display(self, value: float) -> str:
         """
@@ -231,33 +251,45 @@ class TimeSheetApp(ctk.CTkFrame):
         # Establish padding to keep the layout readable
         self.pack(fill="both", expand=True, padx=20, pady=20)
 
-        # KPI Section
-        self.total_hours_label = ctk.CTkLabel(self, text="Total Hours Worked")
-        self.total_hours_value = ctk.CTkLabel(self, text="", font=("Arial", 28))
+        # Ensure columns stretch evenly to center content
+        for col in range(5):
+            self.grid_columnconfigure(col, weight=1)
 
-        self.hours_to_40_label = ctk.CTkLabel(self, text="Hours to 40")
-        self.hours_to_40_value = ctk.CTkLabel(self, text="", font=("Arial", 28))
+        # KPI Section inside its own frame to center across the full width
+        kpi_frame = ctk.CTkFrame(self, fg_color="transparent")
+        kpi_frame.grid(row=0, column=0, columnspan=5, sticky="nsew", pady=(0, 10))
+        for col in range(3):
+            kpi_frame.grid_columnconfigure(col, weight=1)
 
-        self.friday_label = ctk.CTkLabel(self, text="Friday Clock Out")
-        self.friday_value = ctk.CTkLabel(self, text="", font=("Arial", 28))
+        self.total_hours_label = ctk.CTkLabel(kpi_frame, text="Total Hours Worked", anchor="center")
+        self.total_hours_value = ctk.CTkLabel(kpi_frame, text="", font=("Arial", 28))
 
-        self.total_hours_label.grid(row=0, column=0)
-        self.hours_to_40_label.grid(row=0, column=1)
-        self.friday_label.grid(row=0, column=2)
+        self.hours_to_40_label = ctk.CTkLabel(kpi_frame, text="Hours to 40", anchor="center")
+        self.hours_to_40_value = ctk.CTkLabel(kpi_frame, text="", font=("Arial", 28))
 
-        self.total_hours_value.grid(row=1, column=0)
-        self.hours_to_40_value.grid(row=1, column=1)
-        self.friday_value.grid(row=1, column=2)
+        self.friday_label = ctk.CTkLabel(kpi_frame, text="Friday Clock Out", anchor="center")
+        self.friday_value = ctk.CTkLabel(kpi_frame, text="", font=("Arial", 28))
+
+        # Preserve default colors for later resets
+        self._hours_to_40_default_color = self.hours_to_40_value.cget("text_color")
+
+        self.total_hours_label.grid(row=0, column=0, sticky="nsew")
+        self.hours_to_40_label.grid(row=0, column=1, sticky="nsew")
+        self.friday_label.grid(row=0, column=2, sticky="nsew")
+
+        self.total_hours_value.grid(row=1, column=0, sticky="nsew")
+        self.hours_to_40_value.grid(row=1, column=1, sticky="nsew")
+        self.friday_value.grid(row=1, column=2, sticky="nsew")
 
         # Table Headers
         headers = ["Day", "Start", "End", "Lunch (min)", "Hours"]
         for col, header in enumerate(headers):
-            ctk.CTkLabel(self, text=header).grid(row=2, column=col)
+            ctk.CTkLabel(self, text=header, anchor="center").grid(row=2, column=col, sticky="nsew", padx=4, pady=6)
 
         # Day Rows
         for i, day in enumerate(self.days):
             row = i + 3
-            ctk.CTkLabel(self, text=day).grid(row=row, column=0)
+            ctk.CTkLabel(self, text=day, anchor="center").grid(row=row, column=0, sticky="nsew", padx=4, pady=6)
 
             start = ctk.CTkEntry(self)
             end = ctk.CTkEntry(self)
@@ -333,10 +365,10 @@ class TimeSheetApp(ctk.CTkFrame):
             )
 
 
-            start.grid(row=row, column=1)
-            end.grid(row=row, column=2)
-            lunch.grid(row=row, column=3)
-            hours.grid(row=row, column=4)
+            start.grid(row=row, column=1, padx=4, pady=6, sticky="nsew")
+            end.grid(row=row, column=2, padx=4, pady=6, sticky="nsew")
+            lunch.grid(row=row, column=3, padx=4, pady=6, sticky="nsew")
+            hours.grid(row=row, column=4, padx=4, pady=6, sticky="nsew")
 
             self.entries[day] = {
                 "start": start,
@@ -373,7 +405,9 @@ class TimeSheetApp(ctk.CTkFrame):
         self.about_button.pack(side="left", padx=10)
 
         if not os.path.exists("readme.md"):
-            self.about_button.configure(state="disabled")
+            self.about_button.configure(state="disabled", hover=False)
+            self.about_button.bind("<Enter>", self._show_disabled_about_tooltip)
+            self.about_button.bind("<Leave>", self._hide_disabled_about_tooltip)
 
         self.master.bind("<Return>", lambda _: self._calculate())
         
@@ -393,6 +427,7 @@ class TimeSheetApp(ctk.CTkFrame):
         self._clear_validation_styles()
         self.message_label.configure(text="")
         self._clear_hours_labels()
+        self._clear_kpis()
 
         # Collect all five days of input into service-friendly objects
         day_inputs = []
@@ -432,6 +467,7 @@ class TimeSheetApp(ctk.CTkFrame):
                 text="\n".join(result.errors),
                 text_color="red"
             )
+            self._clear_kpis()
             return
 
         # Display warnings (yellow)
@@ -445,7 +481,13 @@ class TimeSheetApp(ctk.CTkFrame):
 
         # Update KPIs
         self.total_hours_value.configure(text=str(result.total_hours))
-        self.hours_to_40_value.configure(text=str(result.hours_to_40))
+        # Hours to 40 color coding: green when over 40, neutral otherwise
+        hours_to_40_text = str(result.hours_to_40)
+        self.hours_to_40_value.configure(text=hours_to_40_text)
+        if result.hours_to_40 is not None and result.hours_to_40 < 0:
+            self.hours_to_40_value.configure(text_color="green")
+        else:
+            self.hours_to_40_value.configure(text_color=self._hours_to_40_default_color)
 
         if result.friday_clock_out:
             self.friday_value.configure(text=result.friday_clock_out)
@@ -488,6 +530,48 @@ class TimeSheetApp(ctk.CTkFrame):
             textbox.insert("1.0", file.read())
 
         textbox.configure(state="disabled")
+
+    def _show_disabled_about_tooltip(self, event: object) -> None:
+        """
+        Shows a small tooltip explaining why About is disabled.
+
+        Args:
+            event: Tkinter enter event.
+
+        Returns:
+            None.
+
+        Raises:
+            None.
+        """
+        if hasattr(self, "_about_tooltip") and self._about_tooltip is not None:
+            return
+        tooltip = ctk.CTkToplevel(self)
+        tooltip.overrideredirect(True)
+        tooltip.attributes("-topmost", True)
+        label = ctk.CTkLabel(tooltip, text="About disabled: readme.md not found", fg_color="#333333", text_color="white", corner_radius=4, padx=6, pady=4)
+        label.pack()
+        x = self.about_button.winfo_rootx()
+        y = self.about_button.winfo_rooty() - 30
+        tooltip.geometry(f"+{x}+{y}")
+        self._about_tooltip = tooltip
+
+    def _hide_disabled_about_tooltip(self, event: object) -> None:
+        """
+        Hides the About disabled tooltip.
+
+        Args:
+            event: Tkinter leave event.
+
+        Returns:
+            None.
+
+        Raises:
+            None.
+        """
+        if hasattr(self, "_about_tooltip") and self._about_tooltip is not None:
+            self._about_tooltip.destroy()
+            self._about_tooltip = None
 
 
 def main() -> None:
