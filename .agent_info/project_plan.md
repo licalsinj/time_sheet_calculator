@@ -12,8 +12,8 @@
 - [x] 24 hour date in End Time rolls over to AM
     - If I type 16:00 into end time it is normalized into 4:00 AM
     - I would expect it to be 4:00 PM
-- [ ] If there's an error on the start time or end time then the lunch doesn't warn you that it's assumed to be 60 minutes
-- [ ] Clicking enter on an unformatted cell does not trigger formatting
+- [ ] If there's an error on the start time or end time then the lunch doesn't warn you that it's assumed to be 60 minutes. I think it should because the warning it's not dependent on the error'd start time
+- [ ] Clicking enter on an unformatted cell does not trigger formatting I would expect it to and i believe it has in the past
 
 ## Feature Implementation
 - [x] Populate the per-day "Hours Worked" column by surfacing daily totals from `TimeSheetService` and wiring them into the UI labels.
