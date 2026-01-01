@@ -12,6 +12,7 @@
 - [x] 24 hour date in End Time rolls over to AM
     - If I type 16:00 into end time it is normalized into 4:00 AM
     - I would expect it to be 4:00 PM
+- [ ] If there's an error on the start time or end time then the lunch doesn't warn you that it's assumed to be 60 minutes
 
 ## Feature Implementation
 - [x] Populate the per-day "Hours Worked" column by surfacing daily totals from `TimeSheetService` and wiring them into the UI labels.
@@ -27,3 +28,22 @@
     - [x] Implement helper unit tests over GUI automation for most UI behavior.
     - [x] If minimal UI coverage is needed, add a local-only smoke test that instantiates the app and calls `_calculate` with prefilled entries.
 - [ ] if the hours column is calculated/assumed to be 8 because no start or end time is given then make the font the number in the Hours column yellow
+
+## Documentation
+
+- [ ] Write the about.md file that will introduce users to the project
+    - This will focus on what to do when you're inside the app
+    - How to use it the happy path
+    - What assumptions the program makes (8am start on friday, 60 min lunch, etc)
+    - What to look out for with errors
+    - How to contact for support (use github or something)
+- [ ] Write the README.md file that will introduce users to the project
+    - A short intro to the project with screen shots of it running
+        - give me a list of screenshots to take should be happy path, errors, neat features like overtime
+    - An explaination for non technical users on how to download/install the app
+    - A link to the about to understand how to use it 
+    - How to run it
+    - How to build from source for technical users
+    - How to contribute (fork and create a PR)
+    - A link to the license file
+- [ ] Add a license file not sure which kind
