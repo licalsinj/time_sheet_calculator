@@ -21,7 +21,7 @@
 - [ ] Add pytest-based unit tests covering time parsing/normalization, partial-day assumptions, lunch validation (including negative/blank cases), Friday clock-out scenarios, and KPI calculations.
     - [x] Implement pytest smoke tests to verify the runner is wired up.
     - [x] Implement initial TimeSheetService tests based on the documented rules.
-    - [ ] Reach full TimeSheetService coverage by filling in any missing edge cases.
+    - [x] Reach full TimeSheetService coverage by filling in any missing edge cases.
     - [ ] Extract UI-adjacent logic into pure helpers to make frontend rules unit-testable.
     - [ ] Add a lightweight view-model layer for app state mapping and test it with pytest.
     - [ ] Prefer service and helper unit tests over GUI automation for most UI behavior.
