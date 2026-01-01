@@ -4,33 +4,25 @@
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "Packaging InspectorEmailTool for distribution..."
+Write-Host "Packaging TimeSheetCalculator for distribution..."
 
 # Version Number
-$Version = "2.0.1"
+$Version = "0.1.0"
 
 # --- Paths (relative to repo root) ---
-$distAppDir = "dist\InspectorEmailTool"
+$distAppDir = "dist\TimeSheetCalculator"
 
-$assetsDir = "assets"
-$readmePath = Join-Path $assetsDir "README.txt"
-$envTemplatePath = Join-Path $assetsDir ".env.template"
-$iconPath = Join-Path $assetsDir "TJ_Logo_Square.ico"
-$feedbackTemplatePath = Join-Path $assetsDir "Inspector Summary Feedback Template.xlsx"
-
+$aboutPath = "src\ABOUT.md"
 
 $packageRoot = "package_tmp"
-$packageAppDir = Join-Path $packageRoot "InspectorEmailTool"
+$packageAppDir = Join-Path $packageRoot "TimeSheetCalculator"
 
-$zipName = "InspectorEmailTool_v$Version.zip"
+$zipName = "TimeSheetCalculator_v$Version.zip"
 
 # --- Validate required inputs ---
 $requiredPaths = @(
     $distAppDir,
-    $readmePath,
-    $envTemplatePath,
-    $iconPath,
-    $feedbackTemplatePath,
+    $aboutPath
 )
 
 foreach ($path in $requiredPaths) {
@@ -63,10 +55,6 @@ Write-Host "Removing sensitive and generated files..."
 Get-ChildItem $packageAppDir -Recurse -Filter ".env" -ErrorAction SilentlyContinue |
     Remove-Item -Force
 
-# Remove Excel output files
-Get-ChildItem $packageAppDir -Recurse -Filter "*.xlsx" -ErrorAction SilentlyContinue |
-    Remove-Item -Force
-
 # Remove logs directory
 $logsDir = Join-Path $packageAppDir "logs"
 if (Test-Path $logsDir) {
@@ -81,17 +69,9 @@ if ($envLeak) {
 }
 
 # --- Add distribution files ---
-Write-Host "Adding README and template files..."
+Write-Host "Adding About file..."
 
-Copy-Item $readmePath $packageAppDir -Force
-Copy-Item $envTemplatePath $packageAppDir -Force
-
-$assetsTarget = Join-Path $packageAppDir "assets"
-New-Item -ItemType Directory -Path $assetsTarget -Force | Out-Null
-# Copy ico image into assets
-Copy-Item $iconPath $assetsTarget -Force
-# Copy Excel template into assets
-Copy-Item $feedbackTemplatePath $assetsTarget -Force
+Copy-Item $aboutPath $packageAppDir -Force
 
 # --- Create ZIP ---
 Write-Host "Creating ZIP archive..."

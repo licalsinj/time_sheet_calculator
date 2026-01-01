@@ -39,8 +39,8 @@ function Tail-LogFile($logPath) {
 # --- Ensure we're running from project root ---
 $projectRoot = Get-Location
 
-# --- Wait for any running InspectorEmailTool.exe ---
-WaitForExeToClose "InspectorEmailTool"
+# --- Wait for any running TimeSheetCalculator.exe ---
+WaitForExeToClose "TimeSheetCalculator"
 
 # --- Clean build folders ---
 SafeRemove "build"
@@ -63,7 +63,12 @@ Write-Host "Building application with PyInstaller..."
 
 # --- Run PyInstaller using uv ---
 # PyInstaller creates the executable
-python -m uv run pyinstaller InspectorEmailTool.spec
+if (Test-Path "TimeSheetCalculator.spec") {
+    python -m uv run pyinstaller TimeSheetCalculator.spec
+}
+else {
+    python -m uv run pyinstaller --noconfirm --clean --windowed --name TimeSheetCalculator src\app.py
+}
 
 # --- Stop if build failed ---
 
@@ -73,28 +78,26 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # --- Verify dist output exists ---
-$distAppPath = "dist\InspectorEmailTool"
+$distAppPath = "dist\TimeSheetCalculator"
 if (-not (Test-Path $distAppPath)) {
     Write-Error "Build output not found at $distAppPath"
     exit 1
 }
 
-$logPath = Join-Path $distAppPath "logs\_internal.log"
+# --- Copy ABOUT.md into dist folder ---
+$aboutSource = "src\ABOUT.md"
+$aboutDestination = Join-Path $distAppPath "ABOUT.md"
 
-# --- Copy .env into dist folder ---
-$envSource = ".env"
-$envDestination = Join-Path $distAppPath ".env"
-
-if (-not (Test-Path $envSource)) {
-    Write-Error ".env file not found in project root. Cannot continue."
+if (-not (Test-Path $aboutSource)) {
+    Write-Error "ABOUT.md not found at $aboutSource. Cannot continue."
     exit 1
 }
 
-Copy-Item $envSource $envDestination -Force
-Write-Host ".env copied to $envDestination"
+Copy-Item $aboutSource $aboutDestination -Force
+Write-Host "ABOUT.md copied to $aboutDestination"
 
 # --- Launch behavior ---
-$exePath = Join-Path $distAppPath "InspectorEmailTool.exe"
+$exePath = Join-Path $distAppPath "TimeSheetCalculator.exe"
 
 if ($Launch -eq "y") {
     Write-Host "Auto-launch enabled. Starting app..."
@@ -114,12 +117,5 @@ else {
     $response = Read-Host "Build succeeded. Launch the app now? (y/n)"
     if ($response.ToLower() -eq "y") {
         Start-Process $exePath
-        
-        if (Test-Path $logPath) {
-            Tail-LogFile $logPath
-        }
-        else {
-            Write-Warning "Log file not found yet: $logPath"
-        }
     }
 }
