@@ -1,13 +1,39 @@
 # ==============================
 # InspectorEmailTool ZIP Packager
 # ==============================
+#
+# Usage:
+#   powershell -ExecutionPolicy Bypass -File tools\package.ps1
+#     Uses version from pyproject.toml.
+#   powershell -ExecutionPolicy Bypass -File tools\package.ps1 -Version 0.1.0
+#     Uses the provided version for the ZIP name.
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "Packaging TimeSheetCalculator for distribution..."
 
-# Version Number
-$Version = "0.1.0"
+# Version Number (from CLI or pyproject.toml)
+param (
+    [string]$Version
+)
+
+if (-not $Version) {
+    try {
+        $tomlPath = Join-Path (Get-Location) "pyproject.toml"
+        $tomlText = Get-Content -Raw -Path $tomlPath
+        if ($tomlText -match 'version\\s*=\\s*"([^"]+)"') {
+            $Version = $Matches[1]
+        }
+    }
+    catch {
+        $Version = $null
+    }
+}
+
+if (-not $Version) {
+    Write-Error "Version not provided and not found in pyproject.toml."
+    exit 1
+}
 
 # --- Paths (relative to repo root) ---
 $distAppDir = "dist\TimeSheetCalculator.exe"
@@ -15,7 +41,7 @@ $distAppDir = "dist\TimeSheetCalculator.exe"
 
 $packageRoot = "package_tmp"
 
-$zipName = "TimeSheetCalculator_v$Version.zip"
+$zipName = "TimeSheetCalculator_windows_v$Version.zip"
 
 # --- Validate required inputs ---
 $requiredPaths = @(

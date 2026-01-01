@@ -13,6 +13,7 @@
     - If I type 16:00 into end time it is normalized into 4:00 AM
     - I would expect it to be 4:00 PM
 - [ ] If there's an error on the start time or end time then the lunch doesn't warn you that it's assumed to be 60 minutes
+- [ ] Clicking enter on an unformatted cell does not trigger formatting
 
 ## Feature Implementation
 - [x] Populate the per-day "Hours Worked" column by surfacing daily totals from `TimeSheetService` and wiring them into the UI labels.
@@ -37,6 +38,8 @@ There are powershell versions and bash versions of these and they should always 
 - [ ] Convert about.md into readme.txt during packaging
     - strip .md formatting but keep it readable probably with decorations unfortunatley
 - [ ] Add an icon for mac and windows
+- [ ] Add signature for mac 
+- [ ] Add signature for windows
 
 ## Documentation
 

@@ -14,7 +14,23 @@ cd "$ROOT_DIR"
 
 # App naming and version for the ZIP file.
 APP_NAME="TimeSheetCalculator"
-VERSION="${1:-0.1.0}"
+VERSION="${1:-}"
+
+if [[ -z "$VERSION" ]]; then
+  VERSION="$(python3 - <<'PY'
+import tomllib
+from pathlib import Path
+
+data = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+print(data.get("project", {}).get("version", ""))
+PY
+)"
+fi
+
+if [[ -z "$VERSION" ]]; then
+  echo "ERROR: Version not provided and not found in pyproject.toml." >&2
+  exit 1
+fi
 
 # Dist folders and bundle names produced by PyInstaller.
 DIST_DIR="dist"
@@ -25,7 +41,7 @@ DIST_APP_BUNDLE="${DIST_DIR}/${APP_NAME}.app"
 PACKAGE_ROOT="package_tmp"
 
 # Output ZIP name.
-ZIP_NAME="${APP_NAME}_v${VERSION}.zip"
+ZIP_NAME="${APP_NAME}_macos_v${VERSION}.zip"
 
 # Pick the build output to package.
 if [[ -d "$DIST_APP_BUNDLE" ]]; then

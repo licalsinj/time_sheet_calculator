@@ -121,13 +121,18 @@ EOF
 cat > "$launcher_path" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-BIN_PATH="${APP_ROOT}/Resources/${APP_NAME}.bin"
-exec "$BIN_PATH"
+SCRIPT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+APP_ROOT="\$(cd "\${SCRIPT_DIR}/.." && pwd)"
+BIN_PATH="\${APP_ROOT}/Resources/${APP_NAME}.bin"
+exec "\$BIN_PATH"
 EOF
 
 chmod +x "$launcher_path" "$binary_path"
+
+if [[ ! -s "$launcher_path" ]]; then
+  echo "ERROR: Launcher script was not created correctly. Aborting." >&2
+  exit 1
+fi
 
 # Copy About markdown into dist so packaging can include it.
 if [[ -f "src/ABOUT.md" ]]; then
