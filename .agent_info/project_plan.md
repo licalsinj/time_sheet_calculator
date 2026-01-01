@@ -22,7 +22,7 @@
     - [x] Implement pytest smoke tests to verify the runner is wired up.
     - [x] Implement initial TimeSheetService tests based on the documented rules.
     - [x] Reach full TimeSheetService coverage by filling in any missing edge cases.
-    - [ ] Extract UI-adjacent logic into pure helpers to make frontend rules unit-testable.
-    - [ ] Add a lightweight view-model layer for app state mapping and test it with pytest.
-    - [ ] Prefer service and helper unit tests over GUI automation for most UI behavior.
+    - [x] Extract UI-adjacent logic into pure helpers to make frontend rules unit-testable.
+    - [x] Add a lightweight view-model layer for app state mapping and test it with pytest.
+    - [ ] Implement helper unit tests over GUI automation for most UI behavior.
     - [ ] If minimal UI coverage is needed, add a local-only smoke test that instantiates the app and calls `_calculate` with prefilled entries.

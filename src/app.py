@@ -9,6 +9,7 @@ import tkinter as tk
 from tkinter import font as tkfont
 import customtkinter as ctk
 from timesheet_service import TimeSheetService, DayInput
+from ui_view_model import compute_ui_state, format_hours_display
 from typing import Optional
 
 # CONSTANTS
@@ -123,21 +124,6 @@ class TimeSheetApp(ctk.CTkFrame):
         self.hours_to_40_value.configure(text="")
         self.friday_value.configure(text="")
         self.hours_to_40_value.configure(text_color=self._hours_to_40_default_color)
-
-    def _format_hours_display(self, value: float) -> str:
-        """
-        Formats hour values by trimming unnecessary trailing zeros.
-
-        Args:
-            value: Hour value to display.
-
-        Returns:
-            Human-friendly string (e.g., 8 -> "8", 7.5 -> "7.5").
-
-        Raises:
-            None.
-        """
-        return f"{value:.2f}".rstrip("0").rstrip(".")
 
     def _resolve_about_path(self) -> Optional[str]:
         """
@@ -442,7 +428,7 @@ class TimeSheetApp(ctk.CTkFrame):
 
         worked_minutes = duration - lunch_minutes
         worked_hours = self.service._round_to_quarter(worked_minutes / 60)
-        fields["hours"].configure(text=self._format_hours_display(worked_hours))
+        fields["hours"].configure(text=format_hours_display(worked_hours))
 
     def _validate_time_entry(self, entry: ctk.CTkEntry, assume_am: bool) -> None:
         """
@@ -467,6 +453,39 @@ class TimeSheetApp(ctk.CTkFrame):
             entry.configure(border_color="red")
         else:
             entry.configure(border_color=DEFAULT_BORDER_COLOR)
+
+    def _validate_time_range(self, day_name: str) -> None:
+        """
+        Validates that the end time is after the start time for a given day.
+
+        Args:
+            day_name: Name of the weekday whose time range is being validated.
+
+        Returns:
+            None.
+
+        Raises:
+            None.
+        """
+        fields = self.entries[day_name]
+        start_raw = fields["start"].get().strip()
+        end_raw = fields["end"].get().strip()
+
+        if not start_raw or not end_raw:
+            return
+
+        start_minutes, _, start_error = self.service._parse_time(
+            start_raw, assume_am=True
+        )
+        end_minutes, _, end_error = self.service._parse_time(
+            end_raw, assume_am=False
+        )
+
+        if start_error or end_error or start_minutes is None or end_minutes is None:
+            return
+
+        if end_minutes <= start_minutes:
+            fields["end"].configure(border_color="red")
 
     def _validate_lunch_entry(self, entry: ctk.CTkEntry) -> None:
         """
@@ -520,6 +539,7 @@ class TimeSheetApp(ctk.CTkFrame):
 
         # If parsing fails, leave the value untouched
         if error or display is None:
+            entry.configure(border_color="red")
             return
 
         # Replace user input with normalized display value
@@ -606,6 +626,7 @@ class TimeSheetApp(ctk.CTkFrame):
                 """
                 self._normalize_time_entry(entry, assume_am=True)
                 self._validate_time_entry(entry, assume_am=True)
+                self._validate_time_range(day)
                 self._update_day_hours(day)
 
             def on_end_focus_out(event: object, entry=end, day=day) -> None:
@@ -625,6 +646,7 @@ class TimeSheetApp(ctk.CTkFrame):
                 """
                 self._normalize_time_entry(entry, assume_am=False)
                 self._validate_time_entry(entry, assume_am=False)
+                self._validate_time_range(day)
                 self._update_day_hours(day)
 
             def on_lunch_focus_out(event: object, day=day) -> None:
@@ -747,16 +769,14 @@ class TimeSheetApp(ctk.CTkFrame):
                 )
             )
 
-        result = self.service.calculate_week(day_inputs)
+        state = compute_ui_state(self.service, day_inputs)
 
         # Highlight lunch warnings (blank lunch assumed)
-        for day in self.days:
-            lunch_value = self.entries[day]["lunch"].get().strip()
-            if not lunch_value:
-                self.entries[day]["lunch"].configure(border_color="yellow")
+        for day in state.lunch_warning_days:
+            self.entries[day]["lunch"].configure(border_color="yellow")
 
         # Apply red borders to invalid fields (always, even if errors exist)
-        for field_key in getattr(result, "field_errors", {}):
+        for field_key in state.field_errors:
             day, field = field_key.split("_")
             entry = self.entries[day][field]
             entry.configure(border_color="red")
@@ -765,43 +785,35 @@ class TimeSheetApp(ctk.CTkFrame):
             entry.bind("<KeyRelease>", lambda e, entry=entry: entry.configure(border_color=DEFAULT_BORDER_COLOR))
 
         # Display errors and exit early if any
-        if result.errors:
-            message_lines = list(result.errors)
-            if result.warnings:
-                message_lines.extend(result.warnings)
-            self.error_label.configure(text="\n".join(result.errors))
-            if result.warnings:
-                self.warning_label.configure(text="\n".join(result.warnings))
+        if state.errors:
+            self.error_label.configure(text="\n".join(state.errors))
+            if state.warnings:
+                self.warning_label.configure(text="\n".join(state.warnings))
             self._clear_kpis()
             return
 
         # Display warnings (yellow)
-        if result.warnings:
-            self.warning_label.configure(text="\n".join(result.warnings))
+        if state.warnings:
+            self.warning_label.configure(text="\n".join(state.warnings))
 
         # Update KPIs
-        self.total_hours_value.configure(text=str(result.total_hours))
-        # Hours to 40 color coding: green when over 40, neutral otherwise
-        hours_to_40_text = str(result.hours_to_40)
-        self.hours_to_40_value.configure(text=hours_to_40_text)
-        if result.hours_to_40 is not None and result.hours_to_40 < 0:
+        self.total_hours_value.configure(text=state.total_hours_text)
+        self.hours_to_40_value.configure(text=state.hours_to_40_text)
+        if state.hours_to_40_is_overtime:
             self.hours_to_40_value.configure(text_color="green")
         else:
             self.hours_to_40_value.configure(text_color=self._hours_to_40_default_color)
 
-        if result.friday_clock_out:
-            self.friday_value.configure(text=result.friday_clock_out)
+        # Always update Friday clock out display from service response
+        self.friday_value.configure(text=state.friday_clock_out_text)
 
         # Per-day hours column
-        for day in self.days:
-            hours_value = result.daily_hours.get(day)
-            if hours_value is not None:
-                display = self._format_hours_display(hours_value)
-                self.entries[day]["hours"].configure(text=display)
+        for day, display in state.daily_hours_text.items():
+            self.entries[day]["hours"].configure(text=display)
 
         # Success messages (green)
-        if getattr(result, "successes", []):
-            self.success_label.configure(text="\n".join(result.successes))
+        if state.successes:
+            self.success_label.configure(text="\n".join(state.successes))
 
 
     def _show_about(self) -> None:
