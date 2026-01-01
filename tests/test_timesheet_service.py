@@ -131,6 +131,30 @@ def test_parse_time_invalid_inputs(service: TimeSheetService) -> None:
     assert error is True
 
 
+def test_parse_time_no_period_handles_twelve(service: TimeSheetService) -> None:
+    """
+    Confirms 12 without a period respects the AM/PM assumption.
+
+    Args:
+        service: TimeSheetService instance.
+
+    Returns:
+        None.
+
+    Raises:
+        None.
+    """
+    minutes, display, error = service._parse_time("12", assume_am=True)
+    assert minutes == 0
+    assert display == "12:00 AM"
+    assert error is False
+
+    minutes, display, error = service._parse_time("12", assume_am=False)
+    assert minutes == 12 * 60
+    assert display == "12:00 PM"
+    assert error is False
+
+
 def test_minutes_to_display_boundaries(service: TimeSheetService) -> None:
     """
     Checks AM/PM conversion at day boundaries.
@@ -230,6 +254,157 @@ def test_partial_day_start_only_invalid_start_errors(service: TimeSheetService) 
     assert result.field_errors.get("Monday_start") == "Invalid start time"
 
 
+def test_incomplete_day_with_invalid_lunch_errors(service: TimeSheetService) -> None:
+    """
+    Rejects lunch input when both start and end are blank.
+
+    Args:
+        service: TimeSheetService instance.
+
+    Returns:
+        None.
+
+    Raises:
+        None.
+    """
+    week = build_week({
+        "Monday": ("", "", "abc"),
+        "Friday": ("8:00 AM", "", ""),
+    })
+    result = service.calculate_week(week)
+    assert "Monday: invalid lunch duration" in result.errors
+    assert result.field_errors.get("Monday_lunch") == "Invalid lunch duration"
+
+
+def test_incomplete_day_with_negative_lunch_errors(service: TimeSheetService) -> None:
+    """
+    Rejects negative lunch values when both start and end are blank.
+
+    Args:
+        service: TimeSheetService instance.
+
+    Returns:
+        None.
+
+    Raises:
+        None.
+    """
+    week = build_week({
+        "Monday": ("", "", "-5"),
+        "Friday": ("8:00 AM", "", ""),
+    })
+    result = service.calculate_week(week)
+    assert "Monday: invalid lunch duration" in result.errors
+    assert result.field_errors.get("Monday_lunch") == "Invalid lunch duration"
+
+
+def test_partial_day_start_only_invalid_lunch_errors(service: TimeSheetService) -> None:
+    """
+    Rejects invalid lunch when only start is provided for a non-Friday day.
+
+    Args:
+        service: TimeSheetService instance.
+
+    Returns:
+        None.
+
+    Raises:
+        None.
+    """
+    week = build_week({
+        "Monday": ("8:00 AM", "", "abc"),
+        "Friday": ("8:00 AM", "", ""),
+    })
+    result = service.calculate_week(week)
+    assert "Monday: invalid lunch duration" in result.errors
+    assert result.field_errors.get("Monday_lunch") == "Invalid lunch duration"
+
+
+def test_partial_day_start_only_negative_lunch_errors(service: TimeSheetService) -> None:
+    """
+    Rejects negative lunch when only start is provided for a non-Friday day.
+
+    Args:
+        service: TimeSheetService instance.
+
+    Returns:
+        None.
+
+    Raises:
+        None.
+    """
+    week = build_week({
+        "Monday": ("8:00 AM", "", "-1"),
+        "Friday": ("8:00 AM", "", ""),
+    })
+    result = service.calculate_week(week)
+    assert "Monday: invalid lunch duration" in result.errors
+    assert result.field_errors.get("Monday_lunch") == "Invalid lunch duration"
+
+
+def test_partial_day_start_only_friday_invalid_start_errors(service: TimeSheetService) -> None:
+    """
+    Reports invalid Friday start when end is blank.
+
+    Args:
+        service: TimeSheetService instance.
+
+    Returns:
+        None.
+
+    Raises:
+        None.
+    """
+    week = build_week({
+        "Friday": ("25:00", "", ""),
+    })
+    result = service.calculate_week(week)
+    assert "Friday: invalid start time" in result.errors
+    assert result.field_errors.get("Friday_start") == "Invalid start time"
+
+
+def test_partial_day_start_only_friday_invalid_lunch_errors(service: TimeSheetService) -> None:
+    """
+    Reports invalid Friday lunch when end is blank.
+
+    Args:
+        service: TimeSheetService instance.
+
+    Returns:
+        None.
+
+    Raises:
+        None.
+    """
+    week = build_week({
+        "Friday": ("8:00 AM", "", "abc"),
+    })
+    result = service.calculate_week(week)
+    assert "Friday: invalid lunch duration" in result.errors
+    assert result.field_errors.get("Friday_lunch") == "Invalid lunch duration"
+
+
+def test_partial_day_start_only_friday_negative_lunch_errors(service: TimeSheetService) -> None:
+    """
+    Rejects negative Friday lunch when end is blank.
+
+    Args:
+        service: TimeSheetService instance.
+
+    Returns:
+        None.
+
+    Raises:
+        None.
+    """
+    week = build_week({
+        "Friday": ("8:00 AM", "", "-1"),
+    })
+    result = service.calculate_week(week)
+    assert "Friday: invalid lunch duration" in result.errors
+    assert result.field_errors.get("Friday_lunch") == "Invalid lunch duration"
+
+
 def test_partial_day_end_only_validates_end(service: TimeSheetService) -> None:
     """
     Validates end-only entries and assumes 8 hours for non-Friday days.
@@ -272,6 +447,50 @@ def test_partial_day_end_only_invalid_end_errors(service: TimeSheetService) -> N
     result = service.calculate_week(week)
     assert "Monday: invalid end time" in result.errors
     assert result.field_errors.get("Monday_end") == "Invalid end time"
+
+
+def test_partial_day_end_only_invalid_lunch_errors(service: TimeSheetService) -> None:
+    """
+    Rejects invalid lunch when only end is provided.
+
+    Args:
+        service: TimeSheetService instance.
+
+    Returns:
+        None.
+
+    Raises:
+        None.
+    """
+    week = build_week({
+        "Monday": ("", "5:00 PM", "abc"),
+        "Friday": ("8:00 AM", "", ""),
+    })
+    result = service.calculate_week(week)
+    assert "Monday: invalid lunch duration" in result.errors
+    assert result.field_errors.get("Monday_lunch") == "Invalid lunch duration"
+
+
+def test_partial_day_end_only_negative_lunch_errors(service: TimeSheetService) -> None:
+    """
+    Rejects negative lunch when only end is provided.
+
+    Args:
+        service: TimeSheetService instance.
+
+    Returns:
+        None.
+
+    Raises:
+        None.
+    """
+    week = build_week({
+        "Monday": ("", "5:00 PM", "-1"),
+        "Friday": ("8:00 AM", "", ""),
+    })
+    result = service.calculate_week(week)
+    assert "Monday: invalid lunch duration" in result.errors
+    assert result.field_errors.get("Monday_lunch") == "Invalid lunch duration"
 
 
 def test_blank_lunch_produces_warning(service: TimeSheetService) -> None:
@@ -382,6 +601,28 @@ def test_end_before_start_is_error(service: TimeSheetService) -> None:
     })
     result = service.calculate_week(week)
     assert "Monday: end time is before start time" in result.errors
+
+
+def test_invalid_end_with_valid_start_is_error(service: TimeSheetService) -> None:
+    """
+    Reports invalid end when both start and end are provided.
+
+    Args:
+        service: TimeSheetService instance.
+
+    Returns:
+        None.
+
+    Raises:
+        None.
+    """
+    week = build_week({
+        "Monday": ("8:00 AM", "25:00", "0"),
+        "Friday": ("8:00 AM", "", ""),
+    })
+    result = service.calculate_week(week)
+    assert "Monday: invalid end time" in result.errors
+    assert result.field_errors.get("Monday_end") == "Invalid end time"
 
 
 def test_errors_propagate_for_multiple_days(service: TimeSheetService) -> None:
@@ -606,3 +847,84 @@ def test_errors_block_kpi_values(service: TimeSheetService) -> None:
     assert result.total_hours is None
     assert result.hours_to_40 is None
     assert result.friday_clock_out is None
+
+
+def test_friday_clock_out_invalid_start_returns_none(service: TimeSheetService) -> None:
+    """
+    Returns None when Friday start is invalid during clock-out calculation.
+
+    Args:
+        service: TimeSheetService instance.
+
+    Returns:
+        None.
+
+    Raises:
+        None.
+    """
+    days = build_week({
+        "Friday": ("25:00", "", ""),
+    })
+    result = service._calculate_friday_clock_out(
+        days=days,
+        pre_friday_minutes=0,
+        friday_minutes=None,
+        warnings=[],
+        successes=[],
+        normalized={},
+    )
+    assert result is None
+
+
+def test_friday_clock_out_invalid_lunch_returns_none(service: TimeSheetService) -> None:
+    """
+    Returns None when Friday lunch is invalid during clock-out calculation.
+
+    Args:
+        service: TimeSheetService instance.
+
+    Returns:
+        None.
+
+    Raises:
+        None.
+    """
+    days = build_week({
+        "Friday": ("8:00 AM", "", "abc"),
+    })
+    result = service._calculate_friday_clock_out(
+        days=days,
+        pre_friday_minutes=0,
+        friday_minutes=None,
+        warnings=[],
+        successes=[],
+        normalized={},
+    )
+    assert result is None
+
+
+def test_friday_clock_out_negative_lunch_returns_none(service: TimeSheetService) -> None:
+    """
+    Returns None when Friday lunch is negative during clock-out calculation.
+
+    Args:
+        service: TimeSheetService instance.
+
+    Returns:
+        None.
+
+    Raises:
+        None.
+    """
+    days = build_week({
+        "Friday": ("8:00 AM", "", "-1"),
+    })
+    result = service._calculate_friday_clock_out(
+        days=days,
+        pre_friday_minutes=0,
+        friday_minutes=None,
+        warnings=[],
+        successes=[],
+        normalized={},
+    )
+    assert result is None
