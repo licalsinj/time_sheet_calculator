@@ -38,12 +38,17 @@
     - What to look out for with errors
     - How to contact for support (use github or something)
 - [ ] Write the README.md file that will introduce users to the project
-    - A short intro to the project with screen shots of it running
-        - give me a list of screenshots to take should be happy path, errors, neat features like overtime
-    - An explaination for non technical users on how to download/install the app
-    - A link to the about to understand how to use it 
-    - How to run it
-    - How to build from source for technical users
-    - How to contribute (fork and create a PR)
-    - A link to the license file
+    - High level: I'd like this to have a check it out section with cool stuff to look at, a non-technical user section, a technical user section. Don't call them that come up with something more professional but that's the idea. 
+    - Check it out:
+        - A short intro to the project with screen shots of it running
+            - give me a list of screenshots to take should be happy path, errors, neat features like overtime
+    - Non technical user info
+        - An explaination for non technical users on how to download/install the app
+        - A link to the about to understand how to use it 
+        - How to run it
+        - How to support (using github support thing)
+    - Technical User info
+        - How to build from source for technical users
+        - How to contribute (fork and create a PR)
+        - A link to the license file (TBD either MIT or GNU) 
 - [ ] Add a license file not sure which kind
