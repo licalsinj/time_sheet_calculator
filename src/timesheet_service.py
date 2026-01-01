@@ -463,12 +463,14 @@ class TimeSheetService:
                 hour += 12
         else:
             # No AM/PM provided, apply default assumption
-            if assume_am:
-                if hour == 12:
-                    hour = 0
-            else:
-                if hour != 12:
-                    hour += 12
+            # Treat 13-23 as 24-hour input to avoid adding 12 again.
+            if hour <= 12:
+                if assume_am:
+                    if hour == 12:
+                        hour = 0
+                else:
+                    if hour != 12:
+                        hour += 12
 
 
         minutes = hour * 60 + minute

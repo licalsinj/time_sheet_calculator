@@ -9,7 +9,7 @@
 - [x] Errors Don't Propogate
     If I enter an invalid time (25:00 or asdf) for monday's start time and tuesday's start time. It only shows an error for Monday.
     It should check all fields that have an input and highlight them red red and show an error message
-- [ ] 24 hour date in End Time rolls over to AM
+- [x] 24 hour date in End Time rolls over to AM
     - If I type 16:00 into end time it is normalized into 4:00 AM
     - I would expect it to be 4:00 PM
 
@@ -18,11 +18,12 @@
 - [x] Add stacked error/warning/info message areas in `src/app.py` with the specified coloring instead of the single `message_label`.
 - [x] Implement simple markdown rendering for the About dialog (H1/H2, bold, italics, bullet lists) rather than showing raw `readme.md` text.
 - [x] Use normalized time strings returned from the service to update entry fields after calculation so all inputs display consistently.
-- [ ] Add pytest-based unit tests covering time parsing/normalization, partial-day assumptions, lunch validation (including negative/blank cases), Friday clock-out scenarios, and KPI calculations.
+- [x] Add pytest-based unit tests covering time parsing/normalization, partial-day assumptions, lunch validation (including negative/blank cases), Friday clock-out scenarios, and KPI calculations.
     - [x] Implement pytest smoke tests to verify the runner is wired up.
     - [x] Implement initial TimeSheetService tests based on the documented rules.
     - [x] Reach full TimeSheetService coverage by filling in any missing edge cases.
     - [x] Extract UI-adjacent logic into pure helpers to make frontend rules unit-testable.
     - [x] Add a lightweight view-model layer for app state mapping and test it with pytest.
-    - [ ] Implement helper unit tests over GUI automation for most UI behavior.
-    - [ ] If minimal UI coverage is needed, add a local-only smoke test that instantiates the app and calls `_calculate` with prefilled entries.
+    - [x] Implement helper unit tests over GUI automation for most UI behavior.
+    - [x] If minimal UI coverage is needed, add a local-only smoke test that instantiates the app and calls `_calculate` with prefilled entries.
+- [ ] if the hours column is calculated/assumed to be 8 because no start or end time is given then make the font the number in the Hours column yellow
