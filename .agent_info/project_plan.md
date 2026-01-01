@@ -43,25 +43,25 @@ There are powershell versions and bash versions of these and they should always 
 
 ## Documentation
 
-- [ ] Write the about.md file that will introduce users to the project
+- [x] Write the about.md file that will introduce users to the project
     - This will focus on what to do when you're inside the app
     - How to use it the happy path
     - What assumptions the program makes (8am start on friday, 60 min lunch, etc)
     - What to look out for with errors
     - handy short cuts like tab and enter
     - How to contact for support (use github or something)
-- [ ] Write the README.md file that will introduce users to the project
+- [x] Write the README.md file that will introduce users to the project
     - High level: I'd like this to have a check it out section with cool stuff to look at, a non-technical user section, a technical user section. Don't call them that come up with something more professional but that's the idea. 
     - Check it out:
         - A short intro to the project with screen shots of it running
             - give me a list of screenshots to take should be happy path, errors, neat features like overtime
     - Non technical user info
         - An explaination for non technical users on how to download/install the app
-        - A link to the about to understand how to use it 
+        - A markdown link to the about to understand how to use it 
         - How to run it
         - How to support (using github support thing)
     - Technical User info
         - How to build from source for technical users
         - How to contribute (fork and create a PR)
-        - A link to the license file (TBD either MIT or GNU) 
-- [ ] Add a license file not sure which kind
+        - A markdown link to the license file (GPLv3) 
+- [x] Add a license file (GPLv3)
