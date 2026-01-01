@@ -553,7 +553,7 @@ def test_refresh_about_button_state_disabled(app_instance: TimeSheetApp) -> None
     Raises:
         None.
     """
-    app_instance._resolve_about_path = types.MethodType(lambda self: None, app_instance)
+    app_instance._get_about_content = types.MethodType(lambda self: None, app_instance)
     app_instance._refresh_about_button_state()
     assert app_instance.about_button.cget("state") == "disabled"
 
@@ -571,8 +571,8 @@ def test_show_about_returns_when_missing(app_instance: TimeSheetApp) -> None:
     Raises:
         None.
     """
-    app_instance._about_path = None
-    app_instance._resolve_about_path = types.MethodType(lambda self: None, app_instance)
+    app_instance._about_content = None
+    app_instance._get_about_content = types.MethodType(lambda self: None, app_instance)
     app_instance._show_about()
     toplevels = [w for w in app_instance.master.winfo_children() if isinstance(w, ctk.CTkToplevel)]
     assert len(toplevels) == 0
@@ -591,7 +591,7 @@ def test_show_and_hide_tooltip(app_instance: TimeSheetApp) -> None:
     Raises:
         None.
     """
-    app_instance._resolve_about_path = types.MethodType(lambda self: None, app_instance)
+    app_instance._get_about_content = types.MethodType(lambda self: None, app_instance)
     app_instance._refresh_about_button_state()
     app_instance._show_disabled_about_tooltip(None)
     assert app_instance._about_tooltip is not None
@@ -612,7 +612,7 @@ def test_show_disabled_tooltip_returns_when_about_exists(app_instance: TimeSheet
     Raises:
         None.
     """
-    app_instance._about_path = str(SRC_PATH / "ABOUT.md")
+    app_instance._get_about_content = types.MethodType(lambda self: "## About", app_instance)
     app_instance._show_disabled_about_tooltip(None)
     assert app_instance._about_tooltip is None
 
@@ -630,7 +630,7 @@ def test_show_disabled_tooltip_returns_when_tooltip_exists(app_instance: TimeShe
     Raises:
         None.
     """
-    app_instance._about_path = None
+    app_instance._get_about_content = types.MethodType(lambda self: None, app_instance)
     app_instance._refresh_about_button_state = types.MethodType(lambda self: None, app_instance)
     app_instance._about_tooltip = ctk.CTkToplevel(app_instance)
     app_instance._show_disabled_about_tooltip(None)
@@ -652,8 +652,7 @@ def test_show_about_renders_markdown(app_instance: TimeSheetApp) -> None:
     Raises:
         None.
     """
-    app_instance._about_path = str(SRC_PATH / "ABOUT.md")
-    app_instance._refresh_about_button_state = types.MethodType(lambda self: None, app_instance)
+    app_instance._get_about_content = types.MethodType(lambda self: "## About", app_instance)
     rendered: dict[str, bool] = {"called": False}
 
     def fake_render(textbox: ctk.CTkTextbox, content: str) -> None:

@@ -29,6 +29,15 @@
     - [x] If minimal UI coverage is needed, add a local-only smoke test that instantiates the app and calls `_calculate` with prefilled entries.
 - [ ] if the hours column is calculated/assumed to be 8 because no start or end time is given then make the font the number in the Hours column yellow
 
+## Build and Packaging
+We're using pyinstaller --onefile
+We use a build and package script. Build makes the executable and package makes the executable into a zip file. 
+There are powershell versions and bash versions of these and they should always be in sync. 
+- [ ] Add versioning to package
+- [ ] Convert about.md into readme.txt during packaging
+    - strip .md formatting but keep it readable probably with decorations unfortunatley
+- [ ] Add an icon for mac and windows
+
 ## Documentation
 
 - [ ] Write the about.md file that will introduce users to the project
@@ -36,6 +45,7 @@
     - How to use it the happy path
     - What assumptions the program makes (8am start on friday, 60 min lunch, etc)
     - What to look out for with errors
+    - handy short cuts like tab and enter
     - How to contact for support (use github or something)
 - [ ] Write the README.md file that will introduce users to the project
     - High level: I'd like this to have a check it out section with cool stuff to look at, a non-technical user section, a technical user section. Don't call them that come up with something more professional but that's the idea. 

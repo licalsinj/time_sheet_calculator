@@ -59,6 +59,9 @@ catch {
 python --version
 python -m uv --version
 
+# Generate embedded About content for the executable.
+python tools\generate_about_content.py
+
 Write-Host "Building application with PyInstaller..."
 
 # --- Run PyInstaller using uv ---
@@ -67,7 +70,7 @@ if (Test-Path "TimeSheetCalculator.spec") {
     python -m uv run pyinstaller TimeSheetCalculator.spec
 }
 else {
-    python -m uv run pyinstaller --noconfirm --clean --windowed --name TimeSheetCalculator src\app.py
+    python -m uv run pyinstaller --noconfirm --clean --onefile --windowed --name TimeSheetCalculator src\app.py
 }
 
 # --- Stop if build failed ---
@@ -78,30 +81,30 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # --- Verify dist output exists ---
-$distAppPath = "dist\TimeSheetCalculator"
+$distAppPath = "dist\TimeSheetCalculator.exe"
 if (-not (Test-Path $distAppPath)) {
     Write-Error "Build output not found at $distAppPath"
     exit 1
 }
 
-# --- Copy ABOUT.md into dist folder ---
-$aboutSource = "src\ABOUT.md"
-$aboutDestination = Join-Path $distAppPath "ABOUT.md"
+# --- Optionally copy About markdown into dist for reference ---
+$aboutCandidates = @("src\ABOUT.md", "src\about.md")
+$aboutSource = $aboutCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 
-if (-not (Test-Path $aboutSource)) {
-    Write-Error "ABOUT.md not found at $aboutSource. Cannot continue."
+if ($aboutSource) {
+    $aboutDestination = Join-Path "dist" "ABOUT.md"
+    Copy-Item $aboutSource $aboutDestination -Force
+    Write-Host "About markdown copied to $aboutDestination"
+}
+else {
+    Write-Error "About markdown not found in src/. Aborting."
     exit 1
 }
 
-Copy-Item $aboutSource $aboutDestination -Force
-Write-Host "ABOUT.md copied to $aboutDestination"
-
 # --- Launch behavior ---
-$exePath = Join-Path $distAppPath "TimeSheetCalculator.exe"
-
 if ($Launch -eq "y") {
     Write-Host "Auto-launch enabled. Starting app..."
-    Start-Process $exePath
+    Start-Process $distAppPath
     if (Test-Path $logPath) {
         Tail-LogFile $logPath
     }
@@ -116,6 +119,6 @@ else {
     # No argument passed → prompt user
     $response = Read-Host "Build succeeded. Launch the app now? (y/n)"
     if ($response.ToLower() -eq "y") {
-        Start-Process $exePath
+        Start-Process $distAppPath
     }
 }

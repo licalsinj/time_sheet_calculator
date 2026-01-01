@@ -57,25 +57,85 @@ fi
 python3 --version
 uv --version
 
+# Require About markdown so the build never ships without About content.
+if [[ ! -f "src/ABOUT.md" && ! -f "src/about.md" ]]; then
+  echo "ERROR: About markdown not found in src/. Aborting." >&2
+  exit 1
+fi
+
+# Generate embedded About content for the executable.
+python3 tools/generate_about_content.py
+
 echo "Building application with PyInstaller..."
 
 # Use a spec file if it exists, otherwise build from the entry point.
 if [[ -f "$SPEC_FILE" ]]; then
   uv run pyinstaller "$SPEC_FILE"
 else
-  uv run pyinstaller --noconfirm --clean --windowed --name "$APP_NAME" "$ENTRY_POINT"
+  uv run pyinstaller --noconfirm --clean --onefile --windowed --name "$APP_NAME" "$ENTRY_POINT"
 fi
 
-# Determine whether the output is a .app bundle or a folder.
-dist_app_dir="dist/$APP_NAME"
-dist_app_bundle="dist/${APP_NAME}.app"
+# Determine whether the output is a single executable.
+dist_app_file="dist/$APP_NAME"
 
-if [[ -d "$dist_app_bundle" ]]; then
-  dist_target="$dist_app_bundle"
-elif [[ -d "$dist_app_dir" ]]; then
-  dist_target="$dist_app_dir"
-else
+if [[ ! -f "$dist_app_file" ]]; then
   echo "Build output not found in dist/." >&2
+  exit 1
+fi
+
+# Build a minimal .app wrapper around the onefile binary.
+dist_app_bundle="dist/${APP_NAME}.app"
+bundle_contents="${dist_app_bundle}/Contents"
+bundle_macos="${bundle_contents}/MacOS"
+bundle_resources="${bundle_contents}/Resources"
+launcher_path="${bundle_macos}/${APP_NAME}"
+binary_path="${bundle_resources}/${APP_NAME}.bin"
+
+rm -rf "$dist_app_bundle"
+mkdir -p "$bundle_macos" "$bundle_resources"
+mv "$dist_app_file" "$binary_path"
+
+cat > "${bundle_contents}/Info.plist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key>
+  <string>${APP_NAME}</string>
+  <key>CFBundleDisplayName</key>
+  <string>${APP_NAME}</string>
+  <key>CFBundleIdentifier</key>
+  <string>com.example.${APP_NAME}</string>
+  <key>CFBundleVersion</key>
+  <string>1.0</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleExecutable</key>
+  <string>${APP_NAME}</string>
+  <key>LSUIElement</key>
+  <false/>
+</dict>
+</plist>
+EOF
+
+cat > "$launcher_path" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+APP_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+BIN_PATH="${APP_ROOT}/Resources/${APP_NAME}.bin"
+exec "$BIN_PATH"
+EOF
+
+chmod +x "$launcher_path" "$binary_path"
+
+# Copy About markdown into dist so packaging can include it.
+if [[ -f "src/ABOUT.md" ]]; then
+  cp "src/ABOUT.md" "dist/ABOUT.md"
+elif [[ -f "src/about.md" ]]; then
+  cp "src/about.md" "dist/ABOUT.md"
+else
+  echo "ERROR: About markdown not found in src/. Aborting." >&2
   exit 1
 fi
 
@@ -83,20 +143,12 @@ fi
 launch="${1:-}"
 if [[ "$launch" == "y" ]]; then
   echo "Auto-launch enabled. Starting app..."
-  if [[ -d "$dist_app_bundle" ]]; then
-    open "$dist_app_bundle"
-  else
-    "$dist_app_dir/$APP_NAME" &
-  fi
+  open "$dist_app_bundle"
 elif [[ "$launch" == "n" ]]; then
   echo "Auto-launch disabled. Build complete."
 else
   read -r -p "Build succeeded. Launch the app now? (y/n) " response
   if [[ "${response,,}" == "y" ]]; then
-    if [[ -d "$dist_app_bundle" ]]; then
-      open "$dist_app_bundle"
-    else
-      "$dist_app_dir/$APP_NAME" &
-    fi
+    open "$dist_app_bundle"
   fi
 fi

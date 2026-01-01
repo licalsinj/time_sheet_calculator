@@ -5,6 +5,7 @@ CustomTkinter user interface for the time sheet calculator.
 """
 
 import os
+import sys
 import tkinter as tk
 from tkinter import font as tkfont
 import customtkinter as ctk
@@ -39,6 +40,7 @@ class TimeSheetApp(ctk.CTkFrame):
         self.entries: dict[str, dict[str, object]] = {}
         self._about_tooltip: Optional[ctk.CTkToplevel] = None
         self._about_path: Optional[str] = None
+        self._about_content: Optional[str] = None
         self._build_ui()
     # ----------------
     # Helper Methods
@@ -145,6 +147,47 @@ class TimeSheetApp(ctk.CTkFrame):
                 return candidate
         return None
 
+    def _get_about_content(self) -> Optional[str]:
+        """
+        Loads About markdown content from an embedded module or file.
+
+        Args:
+            None.
+
+        Returns:
+            Markdown content if available, otherwise None.
+
+        Raises:
+            None.
+        """
+        def load_from_module() -> Optional[str]:
+            try:
+                from about_content import ABOUT_MARKDOWN
+                if ABOUT_MARKDOWN:
+                    return ABOUT_MARKDOWN
+            except Exception:
+                return None
+            return None
+
+        def load_from_file() -> Optional[str]:
+            self._about_path = self._resolve_about_path()
+            if self._about_path:
+                with open(self._about_path, "r", encoding="utf-8") as file:
+                    return file.read()
+            return None
+
+        is_frozen = getattr(sys, "frozen", False)
+        if is_frozen:
+            content = load_from_module()
+            if content:
+                return content
+            return load_from_file()
+
+        content = load_from_file()
+        if content:
+            return content
+        return load_from_module()
+
     def _refresh_about_button_state(self) -> None:
         """
         Enables or disables the About button based on ABOUT file availability.
@@ -158,8 +201,8 @@ class TimeSheetApp(ctk.CTkFrame):
         Raises:
             None.
         """
-        self._about_path = self._resolve_about_path()
-        if self._about_path:
+        self._about_content = self._get_about_content()
+        if self._about_content:
             self.about_button.configure(
                 state="normal",
                 hover=True,
@@ -830,7 +873,7 @@ class TimeSheetApp(ctk.CTkFrame):
             None.
         """
         self._refresh_about_button_state()
-        if not self._about_path:
+        if not self._about_content:
             return
         popup = ctk.CTkToplevel(self)
         popup.title("About")
@@ -838,10 +881,7 @@ class TimeSheetApp(ctk.CTkFrame):
         textbox = ctk.CTkTextbox(popup, wrap="word", width=600, height=400)
         textbox.pack(padx=20, pady=20)
 
-        with open(self._about_path, "r", encoding="utf-8") as file:
-            content = file.read()
-
-        self._render_markdown_to_textbox(textbox, content)
+        self._render_markdown_to_textbox(textbox, self._about_content)
 
     def _show_disabled_about_tooltip(self, event: Optional[object]) -> None:
         """
@@ -857,14 +897,14 @@ class TimeSheetApp(ctk.CTkFrame):
             None.
         """
         self._refresh_about_button_state()
-        if self._about_path:
+        if self._about_content:
             return
         if hasattr(self, "_about_tooltip") and self._about_tooltip is not None:
             return
         tooltip = ctk.CTkToplevel(self)
         tooltip.overrideredirect(True)
         tooltip.attributes("-topmost", True)
-        label = ctk.CTkLabel(tooltip, text="About disabled: src/ABOUT.md not found", fg_color="#333333", text_color="white", corner_radius=4, padx=6, pady=4)
+        label = ctk.CTkLabel(tooltip, text="About disabled: About content not found", fg_color="#333333", text_color="white", corner_radius=4, padx=6, pady=4)
         label.pack()
         x = self.about_button.winfo_rootx()
         y = self.about_button.winfo_rooty() - 30
