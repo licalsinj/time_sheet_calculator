@@ -2,7 +2,7 @@
 
 Welcome! This app helps you track weekly hours, see time remaining to reach 40, and estimate your Friday clock-out based on what you enter.
 
-## Quick start (happy path)
+## Quick start
 1. Enter start and end times for Monday–Thursday (e.g., `8:00 AM`, `5:00 PM`).
 2. Enter lunch minutes (e.g., `60`). Leave blank to auto-assume 60 minutes (you will see a yellow warning).
 3. Enter Friday start (or leave blank to assume `8:00 AM`).
