@@ -1,4 +1,4 @@
-# ==============================
+﻿# ==============================
 # InspectorEmailTool ZIP Packager
 # ==============================
 #
@@ -8,20 +8,20 @@
 #   powershell -ExecutionPolicy Bypass -File tools\package.ps1 -Version 0.1.0
 #     Uses the provided version for the ZIP name.
 
-$ErrorActionPreference = "Stop"
-
-Write-Host "Packaging TimeSheetCalculator for distribution..."
-
 # Version Number (from CLI or pyproject.toml)
 param (
     [string]$Version
 )
 
+$ErrorActionPreference = "Stop"
+
+Write-Host "Packaging TimeSheetCalculator for distribution..."
+
 if (-not $Version) {
     try {
         $tomlPath = Join-Path (Get-Location) "pyproject.toml"
         $tomlText = Get-Content -Raw -Path $tomlPath
-        if ($tomlText -match 'version\\s*=\\s*"([^"]+)"') {
+        if ($tomlText -match 'version\s*=\s*"([^"]+)"') {
             $Version = $Matches[1]
         }
     }
