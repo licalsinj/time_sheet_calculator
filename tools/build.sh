@@ -88,8 +88,9 @@ dist_app_bundle="dist/${APP_NAME}.app"
 bundle_contents="${dist_app_bundle}/Contents"
 bundle_macos="${bundle_contents}/MacOS"
 bundle_resources="${bundle_contents}/Resources"
-launcher_path="${bundle_macos}/${APP_NAME}"
-binary_path="${bundle_resources}/${APP_NAME}.bin"
+binary_path="${bundle_macos}/${APP_NAME}"
+icon_source="assets/timesheet_calculator_icon.icns"
+icon_name="timesheet_calculator_icon.icns"
 
 rm -rf "$dist_app_bundle"
 mkdir -p "$bundle_macos" "$bundle_resources"
@@ -112,25 +113,20 @@ cat > "${bundle_contents}/Info.plist" <<EOF
   <string>APPL</string>
   <key>CFBundleExecutable</key>
   <string>${APP_NAME}</string>
+  <key>CFBundleIconFile</key>
+  <string>${icon_name}</string>
   <key>LSUIElement</key>
   <false/>
 </dict>
 </plist>
 EOF
 
-cat > "$launcher_path" <<EOF
-#!/usr/bin/env bash
-set -euo pipefail
-SCRIPT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
-APP_ROOT="\$(cd "\${SCRIPT_DIR}/.." && pwd)"
-BIN_PATH="\${APP_ROOT}/Resources/${APP_NAME}.bin"
-exec "\$BIN_PATH"
-EOF
+chmod +x "$binary_path"
 
-chmod +x "$launcher_path" "$binary_path"
-
-if [[ ! -s "$launcher_path" ]]; then
-  echo "ERROR: Launcher script was not created correctly. Aborting." >&2
+if [[ -f "$icon_source" ]]; then
+  cp "$icon_source" "${bundle_resources}/${icon_name}"
+else
+  echo "ERROR: Icon file not found at $icon_source. Aborting." >&2
   exit 1
 fi
 
