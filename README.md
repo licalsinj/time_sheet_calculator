@@ -1,32 +1,43 @@
 # Time Sheet Calculator
 
+![Time Sheet Calculator screenshot](./assets/TimesheetCalculatorIcon-Large.png)
+
 Desktop app to track weekly hours, see time remaining to reach 40, and estimate a Friday clock-out time.
 
-## What to look at
-- Suggested screenshots to capture:
-  - Clean “happy path” entry with totals and Hours to 40.
-  - Warning state for assumed lunch (yellow highlights).
-  - Error state for invalid time/lunch (red highlights).
-  - Overtime view with Hours to 40 shown in green.
-  - About dialog rendering markdown.
+## Time Sheet Calculator Demo
 
-## Get the app (non-technical)
+Input your clock in and clock out times for the week and it will auto calculate your clock out time for Friday to get 40 hours.
+![Time Sheet Calculator screenshot](./assets/TimesheetCalculator-Clock_Out.png)
+
+If no lunch time is given 60 minuts for lunch is assumed with a warning.
+![Time Sheet Calculator screenshot](./assets/TimesheetCalculator-Lunch_Warnings.png)
+
+If your start and end times for a day are invalid date formats or in the wrong order a red error will let you know.
+![Time Sheet Calculator screenshot](./assets/TimesheetCalculator-Miscalculation_Errors.png)
+
+If you've worked more than 40 hours for a week overtime will be calculated and clock out time on Friday will be the same as your clock in time.
+![Time Sheet Calculator screenshot](./assets/TimesheetCalculator-Overtime_Handling.png)
+
+To learn how to use the app a helpful about page is provided inside the app.
+![Time Sheet Calculator screenshot](./assets/TimesheetCalculator-About_Page.png)
+
+## Downloads
 - Download the appropriate ZIP:
-  - macOS: `TimeSheetCalculator_macos_vX.Y.Z.zip`
-  - Windows: `TimeSheetCalculator_windows_vX.Y.Z.zip`
+  - [Download TimeSheetCalculator for Windows](./TimeSheetCalculator_windows_v0.1.0.zip)
+  - [Download TimeSheetCalculator for MacOS](./TimeSheetCalculator_macos_v0.1.0.zip)
 - Unzip and run:
   - macOS: double-click `TimeSheetCalculator.app` (use right-click → Open on first run if Gatekeeper warns).
   - Windows: double-click `TimeSheetCalculator.exe` (you may need “Run anyway” if SmartScreen prompts).
-- Open `ABOUT.md` in the ZIP for usage guidance.
+- Open [ABOUT.md](./src/ABOUT.md) in the ZIP for usage guidance.
 
-## Using the app
+## How to Use
 - Enter start/end times for Monday–Thursday; add lunch minutes or leave blank to assume 60 minutes.
 - Enter Friday start (or leave blank to assume 8:00 AM).
-- Click **Calculate** or press **Enter** to update totals, Hours to 40, and Friday clock-out.
+- Click **Calculate** or press **Enter** to update Total Hours Worked, Hours to 40, and Friday clock-out.
 - Red = errors (invalid time, end before start, bad lunch). Yellow = assumed lunch.
-- See `src/ABOUT.md` for the full usage guide.
+- See [ABOUT.md](./src/ABOUT.md) for the full usage guide.
 
-## For developers
+## Building from Source
 - Prerequisites: Python 3.12+, `uv` installed.
 - Setup: `uv sync`
 - Run tests with coverage:
@@ -40,8 +51,10 @@ Desktop app to track weekly hours, see time remaining to reach 40, and estimate 
 - Package (Windows): `powershell -ExecutionPolicy Bypass -File tools\package.ps1`
 
 ## Contributing
-- Fork the repo, create a feature branch, and open a PR.
-- File issues for bugs or feature requests on GitHub.
+Contributions are welcome and appreciated. To contribute please fork the repo, create a feature branch, then open a PR.
+
+## Issues
+File issues for bugs or feature requests through GitHub.
 
 ## License
-- GPLv3 — see `LICENSE`.
+- GPLv3 — see [LICENSE](./LICENSE.md).
